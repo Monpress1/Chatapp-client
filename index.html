@@ -1,0 +1,74 @@
+<!-- index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EKSU ANONYMOUS </title>
+    <style>
+        body { font-family: Arial, sans-serif; 
+        
+        background-size: 100% ;
+        background-repeat: no-repeat;
+        }
+        #messages { 
+            border: 1px solid #ccc; 
+            height: 300px;
+             overflow-y: scroll;
+              margin-bottom: 10px;
+        }
+        #input {
+             width: 50%;
+             height:50px;
+             border-radius:18px 2px;
+         }
+        button{
+height: 40px;
+border-radius: 13px;
+width: 120px;
+        }
+    </style>
+</head>
+<body><center>
+    <h1>EKSU ANONYMOUS</h1>
+    <div id="messages"></div>
+    <input id="input" type="text" placeholder="Type a message..." />
+    <button id="send">Send</button>
+    <script>
+        const socket = new WebSocket('https://websocket-server-6jct.onrender.com');
+        // Listen for messages from the server
+        socket.addEventListener('message', (event) => {
+            const messagesDiv = document.getElementById('messages');
+            if (event.data instanceof Blob) {
+                // If the received data is a Blob, convert it to text
+                const blob = event.data;
+                blob.text().then((text) => {
+                    messagesDiv.innerHTML += `<div>${text}</div>`; // Display the text
+                    messagesDiv.scrollTop = messagesDiv.scrollHeight; // Scroll to the bottom
+                }).catch((error) => {
+                    console.error('Error reading Blob as text:', error);
+                });
+            } else {
+                // If it's not a Blob, handle it as a regular message
+                messagesDiv.innerHTML += `<div>${event.data}</div>`; // Display the message
+                messagesDiv.scrollTop = messagesDiv.scrollHeight; // Scroll to the bottom
+            }
+        });
+        // Send message when button is clicked
+        document.getElementById('send').addEventListener('click', () => {
+            const input = document.getElementById('input');
+            const message = input.value;
+            if (message) {
+                socket.send(message); // Send the message as a string
+                input.value = ''; // Clear input fie
+            }
+        });
+        // Optional: Send message on Enter key press
+        document.getElementById('input').addEventListener('keypress', (event) => {
+            if (event.key === 'Enter') {
+                document.getElementById('send').click();
+            }
+        });
+    </script>
+</body>
+</html>
