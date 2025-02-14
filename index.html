@@ -1,6 +1,8 @@
-<!-- index.html -->
 <!DOCTYPE html>
 <html lang="en">
+     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
 <head>
     <style>
         body {
@@ -8,7 +10,7 @@
         }
 
         #messages {
-            border: 1px solid #ccc;
+            border: px solid #ccc;
             height: 300px;
             overflow-y: scroll;
             padding: 10px;
@@ -54,15 +56,21 @@
     </style>
 </head>
 <body>
-    <center>
-        <h1>Monpress anonymous</h1>
+  
+    <center>   <h1>EKSU ANONYMOUS</h1></center>
         <div id="messages" class="message-container">
             <hr>
         </div>
-        <input id="input" type="text" placeholder="Type a message..." />
+        <br>
+   <center>  <input id="input" type="text" placeholder="Type a message..." />
         <button id="send">Send</button>
-
+        <br> <br>
+        <br> <br><br><br><br> <br><br><br>
         <script>
+        //lets create a username
+        
+        let name = prompt("Select a username, preferably not your real name")
+      
             // ... (Your existing JavaScript code - NO CHANGES NEEDED)
             
             const socket = new WebSocket('https://websocket-server-6jct.onrender.com');
@@ -125,7 +133,7 @@
             messageBox.textContent = message;
             messagesDiv.appendChild(messageBox);
             messagesDiv.scrollTop = messagesDiv.scrollHeight;
-            input.value = '';
+input.value = name + ": " ;
             }
             });
             
