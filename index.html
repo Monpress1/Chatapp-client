@@ -2,73 +2,136 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EKSU ANONYMOUS </title>
     <style>
-        body { font-family: Arial, sans-serif; 
-        
-        background-size: 100% ;
-        background-repeat: no-repeat;
+        body {
+            font-family: Arial, sans-serif;
         }
-        #messages { 
-            border: 1px solid #ccc; 
+
+        #messages {
+            border: 1px solid #ccc;
             height: 300px;
-             overflow-y: scroll;
-              margin-bottom: 10px;
+            overflow-y: scroll;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
         }
+
+        .message-box {
+            background-color: #f0f0f0;
+            border-radius: 10px;
+            padding: 10px;
+            margin-bottom: 5px;
+            max-width: 70%;
+            word-wrap: break-word;
+        }
+
+        .user {
+            align-self: flex-end; /* Align to right */
+            background-color: #e0f2f7; /* Light blue */
+            margin-left: 30%;       /* Push to the right */
+        }
+        .message-container {
+            display: flex; /* Enable flexbox for alignment */
+            flex-direction: column; /* Arrange messages vertically */
+            align-items: flex-start; /* Align messages to the left by default */
+        }
+
+        /* No specific style for 'other' messages needed */
+        /* They will default to flex-start (left) */
+
         #input {
-             width: 50%;
-             height:50px;
-             border-radius:18px 2px;
-         }
-        button{
-height: 40px;
-border-radius: 13px;
-width: 120px;
+            width: 230px;
+            height: 35px;
+            border-radius: 18px 20px;
+            padding-left: 10px;
+        }
+
+        button {
+            height: 35px;
+            border-radius: 13px;
+            width: 50px;
         }
     </style>
 </head>
-<body><center>
-    <h1>EKSU ANONYMOUS</h1>
-    <div id="messages"></div>
-    <input id="input" type="text" placeholder="Type a message..." />
-    <button id="send">Send</button>
-    <script>
-        const socket = new WebSocket('https://websocket-server-6jct.onrender.com');
-        // Listen for messages from the server
-        socket.addEventListener('message', (event) => {
+<body>
+    <center>
+        <h1>Monpress anonymous</h1>
+        <div id="messages" class="message-container">
+            <hr>
+        </div>
+        <input id="input" type="text" placeholder="Type a message..." />
+        <button id="send">Send</button>
+
+        <script>
+            // ... (Your existing JavaScript code - NO CHANGES NEEDED)
+            
+            const socket = new WebSocket('https://websocket-server-6jct.onrender.com');
+            let messageId = 0; // Initialize a message ID counter
+            
+            socket.addEventListener('message', (event) => {
             const messagesDiv = document.getElementById('messages');
+            const messageBox = document.createElement('div');
+            messageBox.classList.add('message-box');
+            
             if (event.data instanceof Blob) {
-                // If the received data is a Blob, convert it to text
-                const blob = event.data;
-                blob.text().then((text) => {
-                    messagesDiv.innerHTML += `<div>${text}</div>`; // Display the text
-                    messagesDiv.scrollTop = messagesDiv.scrollHeight; // Scroll to the bottom
-                }).catch((error) => {
-                    console.error('Error reading Blob as text:', error);
-                });
-            } else {
-                // If it's not a Blob, handle it as a regular message
-                messagesDiv.innerHTML += `<div>${event.data}</div>`; // Display the message
-                messagesDiv.scrollTop = messagesDiv.scrollHeight; // Scroll to the bottom
+            const blob = event.data;
+            blob.text().then((text) => {
+            try {
+            const receivedMessage = JSON.parse(text); // Parse the JSON
+            if (receivedMessage.id !== messageId) { // Check the ID
+            messageBox.textContent = receivedMessage.message;
+            messagesDiv.appendChild(messageBox);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
             }
-        });
-        // Send message when button is clicked
-        document.getElementById('send').addEventListener('click', () => {
+            } catch (error) {
+            console.error("Error parsing JSON:", error);
+            // Handle the error appropriately, e.g., display a default message
+            messageBox.textContent = text; // Fallback: display raw text
+            messagesDiv.appendChild(messageBox);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            }
+            
+            }).catch((error) => {
+            console.error('Error reading Blob as text:', error);
+            });
+            } else {
+            try {
+            const receivedMessage = JSON.parse(event.data); // Try parsing JSON
+            if (receivedMessage.id !== messageId) {
+            messageBox.textContent = receivedMessage.message;
+            messagesDiv.appendChild(messageBox);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            }
+            } catch (error) {
+            console.error("Error parsing JSON:", error);
+            messageBox.textContent = event.data;
+            messagesDiv.appendChild(messageBox);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            }
+            }
+            });
+            
+            document.getElementById('send').addEventListener('click', () => {
             const input = document.getElementById('input');
             const message = input.value;
             if (message) {
-                socket.send(message); // Send the message as a string
-                input.value = ''; // Clear input fie
+            messageId++; // Increment message ID
+            const messageToSend = JSON.stringify({  message, id: messageId }); // Include ID
+            socket.send(messageToSend);
+            
+            const messagesDiv = document.getElementById('messages');
+            const messageBox = document.createElement('div');
+            messageBox.classList.add('message-box', 'user');
+            messageBox.textContent = message;
+            messagesDiv.appendChild(messageBox);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            input.value = '';
             }
-        });
-        // Optional: Send message on Enter key press
-        document.getElementById('input').addEventListener('keypress', (event) => {
-            if (event.key === 'Enter') {
-                document.getElementById('send').click();
-            }
-        });
-    </script>
+            });
+            
+            // ... (rest of your JavaScript)
+            
+        </script>
+    </center>
 </body>
 </html>
