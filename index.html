@@ -1,16 +1,18 @@
-<!DOCTYPE html>
+            
+          <!DOCTYPE html>
 <html lang="en">
-     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EKSU ANONYMOUS</title>
     <style>
         body {
             font-family: Arial, sans-serif;
+            overflow-x: hidden; /* Prevent horizontal scrollbar during animation */
         }
 
         #messages {
-            border: px solid #ccc;
+            border: 1px solid #ccc;
             height: 300px;
             overflow-y: scroll;
             padding: 10px;
@@ -25,121 +27,196 @@
             margin-bottom: 5px;
             max-width: 70%;
             word-wrap: break-word;
+            opacity: 0; /* Initially hidden */
+            transform: translateY(20px); /* Initially slightly below */
+            animation: fadeInMoveUp 0.5s ease-in-out forwards; /* Apply animation */
+        }
+
+        @keyframes fadeInMoveUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         .user {
-            align-self: flex-end; /* Align to right */
-            background-color: #e0f2f7; /* Light blue */
-            margin-left: 30%;       /* Push to the right */
-        }
-        .message-container {
-            display: flex; /* Enable flexbox for alignment */
-            flex-direction: column; /* Arrange messages vertically */
-            align-items: flex-start; /* Align messages to the left by default */
+            align-self: flex-end;
+            background-color: #e0f2f7;
+            margin-left: 30%;
         }
 
-        /* No specific style for 'other' messages needed */
-        /* They will default to flex-start (left) */
+        .message-container {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
 
         #input {
             width: 230px;
             height: 35px;
             border-radius: 18px 20px;
             padding-left: 10px;
+            transition: border-color 0.3s ease; /* Smooth border color transition */
+        }
+
+        #input:focus {
+            border-color: #007bff; /* Highlight border on focus */
+            outline: none; /* Remove default outline */
         }
 
         button {
             height: 35px;
             border-radius: 13px;
             width: 50px;
+            background-color: #007bff; /* Blue button */
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s ease; /* Smooth background transition */
         }
+
+        button:hover {
+            background-color: #0056b3; /* Darker blue on hover */
+        }
+        
     </style>
 </head>
 <body>
-  
-    <center>   <h1>EKSU ANONYMOUS</h1></center>
-        <div id="messages" class="message-container">
-            <hr>
-        </div>
-        <br>
-   <center>  <input id="input" type="text" placeholder="Type a message..." />
+    <center>
+        <h1>EKSU ANONYMOUS</h1>
+    </center>
+    <div id="messages" class="message-container">
+        <hr>
+    </div>
+    <br>
+    <center>
+        <input id="input" type="text" placeholder="Type a message..." />
         <button id="send">Send</button>
-        <br> <br>
-        <br> <br><br><br><br> <br><br><br>
-        <script>
-        //lets create a username
-        
-        let name = prompt("Select a username, preferably not your real name")
+        <br><br><br><br><br><br><br>
+    </center>
+    <script>
+    let name = prompt("Select a username, preferably not your real name");
+      if (!name) {
+          name = "Anonymous";
+      }
+    
+      const socket = new WebSocket('wss://websocket-server-6jct.onrender.com');
+      let messageId = 0;
+    
+      const messagesDiv = document.getElementById('messages');
+    
+      function displayMessage(message, isUser) {
+          const messageBox = document.createElement('div');
+          messageBox.classList.add('message-box');
+          if (isUser) {
+              messageBox.classList.add('user');
+          }
+          messageBox.textContent = message;
+          messagesDiv.appendChild(messageBox);
+          messagesDiv.scrollTop = messagesDiv.scrollHeight;
+      }
+    
+      function storeMessage(message, isUser) {
+          const storedMessages = JSON.parse(localStorage.getItem('messages')) || [];
+          storedMessages.push({ message: message, isUser: isUser }); // Store message and isUser
+          localStorage.setItem('messages', JSON.stringify(storedMessages));
+      }
+    
+      // Load messages from localStorage
+      const storedMessages = JSON.parse(localStorage.getItem('messages')) || [];
+      storedMessages.forEach(msgObj => {
+          displayMessage(msgObj.message, msgObj.isUser); // Use stored isUser value
+      });
+    
+    
+      socket.addEventListener('open', () => {
+          console.log('Connected to WebSocket server');
+      });
+    
+      socket.addEventListener('message', (event) => {
+          if (event.data instanceof Blob) {
+              const blob = event.data;
+              blob.text().then(text => {
+                  try {
+                      const receivedMessage = JSON.parse(text);
+                      if (receivedMessage && receivedMessage.id !== undefined && receivedMessage.id !== null && receivedMessage.id !== messageId -1) {
+                          displayMessage(receivedMessage.message);
+                          storeMessage(receivedMessage.message, false); // Store as received
+                      }
+                  } catch (error) {
+                      console.error("Error parsing JSON:", error);
+                      displayMessage(text);
+                      storeMessage(text, false); // Store as received
+                  }
+              }).catch(error => {
+                  console.error('Error reading Blob as text:', error);
+              });
+          } else {
+              try {
+                  const receivedMessage = JSON.parse(event.data);
+                  if (receivedMessage && receivedMessage.id !== undefined && receivedMessage.id !== null && receivedMessage.id !== messageId -1) {
+                      displayMessage(receivedMessage.message);
+                      storeMessage(receivedMessage.message, false); // Store as received
+                  }
+              } catch (error) {
+                  console.error("Error parsing JSON:", error);
+                  displayMessage(event.data);
+                  storeMessage(event.data, false); // Store as received
+              }
+          }
+      });
+    
+      document.getElementById('send').addEventListener('click', () => {
+          const message = document.getElementById('input').value;
+          if (message.trim() !== "") {
+              const currentMessageId = messageId++;
+              const messageToSend = {
+                  id: currentMessageId,
+                  message: name + ": " + message
+              };
+    
+              socket.send(JSON.stringify(messageToSend));
+              displayMessage(messageToSend.message, true); // Display immediately as user message
+              storeMessage(messageToSend.message, true); // Store as user message
+              document.getElementById('input').value = '';
+          }
+      });
+    
+      socket.addEventListener('close', () => {
+          console.log('Disconnected from WebSocket server');
+      });
+    
+      socket.addEventListener('error', (error) => {
+          console.error('WebSocket error:', error);
+      });
       
-            // ... (Your existing JavaScript code - NO CHANGES NEEDED)
-            
-            const socket = new WebSocket('https://websocket-server-6jct.onrender.com');
-            let messageId = 0; // Initialize a message ID counter
-            
-            socket.addEventListener('message', (event) => {
-            const messagesDiv = document.getElementById('messages');
+        // ... (Your existing JavaScript code remains the same)
+
+        function displayMessage(message, isUser) {
             const messageBox = document.createElement('div');
             messageBox.classList.add('message-box');
-            
-            if (event.data instanceof Blob) {
-            const blob = event.data;
-            blob.text().then((text) => {
-            try {
-            const receivedMessage = JSON.parse(text); // Parse the JSON
-            if (receivedMessage.id !== messageId) { // Check the ID
-            messageBox.textContent = receivedMessage.message;
-            messagesDiv.appendChild(messageBox);
-            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            if (isUser) {
+                messageBox.classList.add('user');
             }
-            } catch (error) {
-            console.error("Error parsing JSON:", error);
-            // Handle the error appropriately, e.g., display a default message
-            messageBox.textContent = text; // Fallback: display raw text
-            messagesDiv.appendChild(messageBox);
-            messagesDiv.scrollTop = messagesDiv.scrollHeight;
-            }
-            
-            }).catch((error) => {
-            console.error('Error reading Blob as text:', error);
-            });
-            } else {
-            try {
-            const receivedMessage = JSON.parse(event.data); // Try parsing JSON
-            if (receivedMessage.id !== messageId) {
-            messageBox.textContent = receivedMessage.message;
-            messagesDiv.appendChild(messageBox);
-            messagesDiv.scrollTop = messagesDiv.scrollHeight;
-            }
-            } catch (error) {
-            console.error("Error parsing JSON:", error);
-            messageBox.textContent = event.data;
-            messagesDiv.appendChild(messageBox);
-            messagesDiv.scrollTop = messagesDiv.scrollHeight;
-            }
-            }
-            });
-            
-            document.getElementById('send').addEventListener('click', () => {
-            const input = document.getElementById('input');
-            const message = input.value;
-            if (message) {
-            messageId++; // Increment message ID
-            const messageToSend = JSON.stringify({  message, id: messageId }); // Include ID
-            socket.send(messageToSend);
-            
-            const messagesDiv = document.getElementById('messages');
-            const messageBox = document.createElement('div');
-            messageBox.classList.add('message-box', 'user');
             messageBox.textContent = message;
+
+            // Add the message to the DOM *before* getting its height
             messagesDiv.appendChild(messageBox);
+
+            // Trigger reflow to calculate height *after* element is in DOM
+            messageBox.offsetHeight;
+
+            // Now the animation will work correctly
             messagesDiv.scrollTop = messagesDiv.scrollHeight;
-input.value = name + ": " ;
-            }
-            });
-            
-            // ... (rest of your JavaScript)
-            
-        </script>
-    </center>
+        }
+
+        // ... (Rest of your JavaScript code)
+        
+        
+    </script>
 </body>
 </html>
