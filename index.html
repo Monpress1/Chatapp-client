@@ -1,222 +1,438 @@
-            
-          <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MONPRESS ANONYMOUS</title>
+    <title>EKSU ANONYMOUS</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
-            overflow-x: hidden; /* Prevent horizontal scrollbar during animation */
-        }
-
-        #messages {
-            border: 1px solid #ccc;
-            height: 300px;
-            overflow-y: scroll;
-            padding: 10px;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .message-box {
+            font-family: sans-serif;
             background-color: #f0f0f0;
-            border-radius: 10px;
-            padding: 10px;
-            margin-bottom: 5px;
-            max-width: 70%;
-            word-wrap: break-word;
-            opacity: 0; /* Initially hidden */
-            transform: translateY(20px); /* Initially slightly below */
-            animation: fadeInMoveUp 0.5s ease-in-out forwards; /* Apply animation */
-        }
-
-        @keyframes fadeInMoveUp {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .user {
-            align-self: flex-end;
-            background-color: #e0f2f7;
-            margin-left: 30%;
-        }
-
-        .message-container {
             display: flex;
             flex-direction: column;
-            align-items: flex-start;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
         }
 
-        #input {
-            width: 230px;
-            height: 35px;
-            border-radius: 18px 20px;
-            padding-left: 10px;
-            transition: border-color 0.3s ease; /* Smooth border color transition */
+        #roomInput, button {
+        padding: 8px 12px;
+        margin: 5px;
+        border: none;
+        border-radius: 5px;
+        background-image: linear-gradient(to right, purple, black);
+        color: white;
+        cursor: pointer;
         }
-
-        #input:focus {
-            border-color: #007bff; /* Highlight border on focus */
-            outline: none; /* Remove default outline */
+        
+        #messageArea {
+        width: 80%;
+        max-width: 600px;
+        margin: 20px auto;
+        border: 1px solid #ccc;
+        padding: 10px;
+        overflow-y: auto;
+        height: 200px;
+        background-color: white;
+        border-radius: 8px;
+        display: flex;
+        flex-direction: column;
         }
-
+        
+        .message {
+        padding: 8px;
+        margin-bottom: 5px;
+        border-radius: 8px;
+        max-width: 70%;
+        animation: fadeIn 0.5s ease-in-out;
+        align-self: flex-start;
+        clear: both;
+        }
+        
+        @keyframes fadeIn {
+        from {
+        opacity: 0;
+        transform: translateY(10px);
+        }
+        to {
+        opacity: 1;
+        transform: translateY(0);
+        }
+        }
+        
+        .message.sent {
+        align-self: flex-end;
+        background:#03A9F4;
+        color: white;
+        
+        }
+        
+        .message.received {
+        background-color: #e0e0e0;
+        color: black;
+        }
+        
+        #messageInput {
+        width: 70%;
+        padding: 8px;
+        margin: 5px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        }
+        
+        #messageInput, #messageInput:focus, button {
+        outline: none;
+        }
+        
+        #messageInput{
+        background-image: ;
+        color: black;
+        width:200px;
+        border-radius:8px;
+        height:20px;
+        
+        }
         button {
-            height: 35px;
-            border-radius: 13px;
-            width: 50px;
-            background-color: #007bff; /* Blue button */
-            color: white;
-            border: none;
-            cursor: pointer;
-            transition: background-color 0.3s ease; /* Smooth background transition */
+        background: #03A9F4;
+        color: white;
         }
-
-        button:hover {
-            background-color: #0056b3; /* Darker blue on hover */
+        
+        #notification {
+        position: fixed;
+        top: 60%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background-color: rgba(0, 0, 222, 0.4);
+        color: white;
+        padding: 20px;
+        border-radius: 10px;
+        z-index: 1000;
+        opacity: 0;
+        width:160px;
+        transition: opacity 0.4s ease-in-out;
         }
+        
+        #notification.show {
+        opacity: 1;
+        }
+        .display{
+        display:flex;
+        }
+        #container {
+        width: 290px;
+        height: 39px;
+        background-color: lightgray;
+        position: relative; 
+        left:5px;
+        
+        /* Needed for absolute positioning of the hidden div */
+        }
+        
+        #trigger { /* The element you hover over */
+        padding: 10px;
+        background-color: gray;
+        cursor: pointer;
+        }
+        #hiddenDiv {
+        display: none; /* Initially hidden */
+        position: absolute; /* Position it within the container */
+        top: 1200%; /* Position below the trigger */
+        left: 0px;
+        width: 100%;
+        background-color: white;
+        padding: 10px;
+        border: 1px solid gray;
+        box-sizing: border-box; /* Include padding and border in width */
+        }
+        
+        #container:hover #hiddenDiv { /* Show #hiddenDiv when hovering over #container */
+        display: block;
+        }
+        .highlight-green { color: green; 
+        font-family:cursive;
+        font-size:larger ;
+        
+        text-shadow: 0 0 1.0px #00ffff, 0 0 2.0px #00ffff, 0 0 3.0px #00ffff;
+        animation: glow 1.5s ease-in-out infinite alternate;
+        }
+        
+        @keyframes glow {
+        to { text-shadow: 0 0 20px red, 0 0 30px black, 0 0 40px #00ffff;}
+        }
+        .highlight-yellow { color: yellow; 
+        font-size: ;
+        
+        text-shadow: 0 0 1.0px #00ffff, 0 0 2.0px #00ffff, 0 0 3.0px #00ffff;
+        animation: glow 1.5s ease-in-out infinite alternate;
+        }
+        
+        @keyframes glow {
+        to { text-shadow: 0 0 20px red, 0 0 30px black, 0 0 40px #00ffff;}
+        }
+        
+        .highlight-red { color: red;
+         
+         
+        font-size: ;
+        
+        text-shadow: 0 0 1.0px #00ffff, 0 0 2.0px #00ffff, 0 0 3.0px #00ffff;
+        animation: glow 1.5s ease-in-out infinite alternate;
+        }
+        
+        @keyframes glow {
+        to { text-shadow: 0 0 20px red, 0 0 30px black, 0 0 40px #00ffff;}
+        }
+        .highlight-yellow { color: yellow; 
+        font-size: ;
+       
+        text-shadow: 0 0 1.0px #00ffff, 0 0 2.0px #00ffff, 0 0 3.0px #00ffff;
+        animation: glow 1.5s ease-in-out infinite alternate;
+        }
+        
+        @keyframes glow {
+        to { text-shadow: 0 0 20px red, 0 0 30px black, 0 0 40px #00ffff;}
+        }
+        
+        .floating-icon {
+        position: fixed; /* Stays in a fixed position on the screen */
+        bottom: 20px; /* Adjust vertical position (distance from bottom) */
+        right: 20px; /* Adjust horizontal position (distance from right) */
+        /* OR use top and left instead of bottom and right */
+        /* top: 20px;
+        left: 20px; */
+        z-index: 100; /* Ensure it's above other content */
+        /* Styling for the icon itself */
+        background-color: #007bff; /* Example background color */
+        color: white; /* Example text color */
+        width: 50px; /* Adjust size */
+        height: 50px;
+        border-radius: 50%; /* Make it circular */
+        display: flex; /* Use flexbox for centering */
+        align-items: center;
+        justify-content: center;
+        font-size: 24px; /* Adjust icon size */
+        box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.3); /* Optional shadow */
+        /* Optional transition for hover effect */
+        transition: transform 0.2s ease-in-out;
+        }
+        
+        .floating-icon:hover {
+        transform: scale(1.1); /* Slightly enlarge on hover */
+        }
+        
+        /* Example of adding an icon (using Font Awesome) */
+        .floating-icon i { /* Target the icon inside the div */
+        /* ... any other specific icon styling ... */
+        }
+        
+        
+        /* Example of adding text to the icon */
+        .floating-icon span {
+        /* ... any specific text styling ... */
+        margin-left: 5px; /* Add some space between icon and text */
+        }
+        
+        /* Example usage in HTML (using Font Awesome) */
+        /* <div class="floating-icon">
+        <i class="fas fa-plus"></i>  </div> */
+        
+        /* Example usage in HTML (with just an image) */
+        /* <div class="floating-icon">
+        <img src="path/to/your/icon.png" alt="Icon">
+        </div> */
         
     </style>
 </head>
 <body>
-    <center>
-        <h1>EKSU ANONYMOUS</h1>
-    </center>
-    <div id="messages" class="message-container">
-        <hr>
-    </div>
     <br>
-    <center>
-        <input id="input" type="text" placeholder="Type a message..." />
-        <button id="send">Send</button>
-        <br><br><br><br><br><br><br>
+    <div id="container">
+        <div id="trigger">change room</div>
+        <div id="hiddenDiv">
+            <label for="roomInput">Room:</label>
+            <input type="text" id="roomInput" value="GENERAL">
+            <button onclick="joinRoom(document.getElementById('roomInput').value)">CREATE/JOIN</button>
+        </div>
+    </div>
+    <div id="messageArea"></div>
+    <div class="display">
+        <input type="text" id="messageInput">
+        <button onclick="sendMessage()">Send</button>
+    </div>
+    <br><br>
+    <div class="display">
+        <button onclick="clearLocalStorage()">Clear Chat History</button>
+        <button>help</button>
+    </div> <br><br>
+    <div id="notification"></div>
     </center>
+    <div class="floating-icon">
+<a href="whatsapp://send?text=Chat ANONYMOUS on FlowChat: https://tinyurl.com/yjfxpsxh" target="_blank">
+  <img src="whatsapp.png" alt="WhatsApp" width="30" height="30">  </a>
+</div>
+            <br><br><br><br> <a href="http://miportfolio.rf.gd/?i=1"> Monpress</a>
     <script>
-    let name = prompt("Select a username, preferably not your real name");
-      if (!name) {
-          name = "Anonymous";
-      }
-    
-      const socket = new WebSocket('wss://websocket-server-6jct.onrender.com');
-      let messageId = 0;
-    
-      const messagesDiv = document.getElementById('messages');
-    
-      function displayMessage(message, isUser) {
-          const messageBox = document.createElement('div');
-          messageBox.classList.add('message-box');
-          if (isUser) {
-              messageBox.classList.add('user');
-          }
-          messageBox.textContent = message;
-          messagesDiv.appendChild(messageBox);
-          messagesDiv.scrollTop = messagesDiv.scrollHeight;
-      }
-    
-      function storeMessage(message, isUser) {
-          const storedMessages = JSON.parse(localStorage.getItem('messages')) || [];
-          storedMessages.push({ message: message, isUser: isUser }); // Store message and isUser
-          localStorage.setItem('messages', JSON.stringify(storedMessages));
-      }
-    
-      // Load messages from localStorage
-      const storedMessages = JSON.parse(localStorage.getItem('messages')) || [];
-      storedMessages.forEach(msgObj => {
-          displayMessage(msgObj.message, msgObj.isUser); // Use stored isUser value
-      });
-    
-    
-      socket.addEventListener('open', () => {
-          console.log('Connected to WebSocket server');
-      });
-    
-      socket.addEventListener('message', (event) => {
-          if (event.data instanceof Blob) {
-              const blob = event.data;
-              blob.text().then(text => {
-                  try {
-                      const receivedMessage = JSON.parse(text);
-                      if (receivedMessage && receivedMessage.id !== undefined && receivedMessage.id !== null && receivedMessage.id !== messageId -1) {
-                          displayMessage(receivedMessage.message);
-                          storeMessage(receivedMessage.message, false); // Store as received
-                      }
-                  } catch (error) {
-                      console.error("Error parsing JSON:", error);
-                      displayMessage(text);
-                      storeMessage(text, false); // Store as received
-                  }
-              }).catch(error => {
-                  console.error('Error reading Blob as text:', error);
-              });
-          } else {
-              try {
-                  const receivedMessage = JSON.parse(event.data);
-                  if (receivedMessage && receivedMessage.id !== undefined && receivedMessage.id !== null && receivedMessage.id !== messageId -1) {
-                      displayMessage(receivedMessage.message);
-                      storeMessage(receivedMessage.message, false); // Store as received
-                  }
-              } catch (error) {
-                  console.error("Error parsing JSON:", error);
-                  displayMessage(event.data);
-                  storeMessage(event.data, false); // Store as received
-              }
-          }
-      });
-    
-      document.getElementById('send').addEventListener('click', () => {
-          const message = document.getElementById('input').value;
-          if (message.trim() !== "") {
-              const currentMessageId = messageId++;
-              const messageToSend = {
-                  id: currentMessageId,
-                  message: name + ": " + message
-              };
-    
-              socket.send(JSON.stringify(messageToSend));
-              displayMessage(messageToSend.message, true); // Display immediately as user message
-              storeMessage(messageToSend.message, true); // Store as user message
-              document.getElementById('input').value = '';
-          }
-      });
-    
-      socket.addEventListener('close', () => {
-          console.log('Disconnected from WebSocket server');
-      });
-    
-      socket.addEventListener('error', (error) => {
-          console.error('WebSocket error:', error);
-      });
-      
-        // ... (Your existing JavaScript code remains the same)
+        const ws = new WebSocket('wss://websocket-server-6jct.onrender.com'); // **REPLACE WITH YOUR WEBSOCKET URL**
+        let currentRoom = "GENERAL";
+        const messageArea = document.getElementById('messageArea');
+        const messageHistory = new Map();
+        let myUsername = null;
+        let connectionReady = false;
 
-        function displayMessage(message, isUser) {
-            const messageBox = document.createElement('div');
-            messageBox.classList.add('message-box');
-            if (isUser) {
-                messageBox.classList.add('user');
-            }
-            messageBox.textContent = message;
+        const adjectives = ["Happy", "Brave", "Clever", "Silly", "Kind", "Gentle", "Witty", "Curious", "Radiant", "Vibrant"];
+        const animals = ["Dog", "Cat", "Lion", "Tiger", "Bear", "Elephant", "Fox", "Rabbit", "Wolf", "Deer"];
 
-            // Add the message to the DOM *before* getting its height
-            messagesDiv.appendChild(messageBox);
-
-            // Trigger reflow to calculate height *after* element is in DOM
-            messageBox.offsetHeight;
-
-            // Now the animation will work correctly
-            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        function generateUsername() {
+            const randomAdjective = adjectives[Math.floor(Math.random() * adjectives.length)];
+            const randomAnimal = animals[Math.floor(Math.random() * animals.length)];
+            return randomAdjective + " " + randomAnimal;
         }
 
-        // ... (Rest of your JavaScript code)
+        ws.onopen = () => {
+            console.log('Connected to WebSocket server!');
+            myUsername = generateUsername();
+            console.log("Generated username:", myUsername);
+            connectionReady = true;
+            joinRoom(currentRoom);
+        };
+
+        ws.onmessage = (event) => {
+            try {
+                const message = JSON.parse(event.data);
+                if (message && message.room === currentRoom) {
+                    let messageId = message.id || generateMessageId();
+                    const messageContent = message.content;
+
+                    if (messageContent && !messageHistory.has(messageId)) {
+                        messageHistory.set(messageId, messageContent);
+                        const isSent = message.sender === myUsername;
+                        displayMessage(messageContent, isSent, messageId, message.sender);
+                        saveMessageToLocalStorage(messageContent, isSent, message.sender);
+                    }
+                }
+            } catch (error) {
+                console.error("Error parsing message:", error);
+                console.log("Raw message data:", event.data);
+            }
+        };
+
+        ws.onerror = (error) => { console.error("WebSocket error:", error); };
+        ws.onclose = () => {
+            console.log('Disconnected from WebSocket server');
+            messageArea.innerHTML += "<p>Connection closed.</p>";
+            connectionReady = false;
+        };
+
+        function showNotification(message) {
+            const notificationDiv = document.getElementById('notification');
+            notificationDiv.textContent = message;
+            notificationDiv.classList.add('show');
+
+            setTimeout(() => {
+                notificationDiv.classList.remove('show');
+            }, 3000);
+        }
+
+        function joinRoom(roomId) {
+            if (currentRoom && currentRoom !== roomId) {
+                ws.send(JSON.stringify({ type: 'leave', room: currentRoom, user: myUsername }));
+            }
+            currentRoom = roomId;
+
+            if (connectionReady) {
+                ws.send(JSON.stringify({ type: 'join', room: roomId, user: myUsername }));
+                messageArea.innerHTML = "";
+                showNotification(`Welcome, you joined ${roomId}! room`);
+                loadMessagesFromLocalStorage();
+            } else {
+                console.log("Connection not yet ready. Waiting to join room.");
+            }
+        }
+
+        function sendMessage() {
+            const messageInput = document.getElementById('messageInput');
+            const content = messageInput.value;
+
+            if (content.trim() !== "" && currentRoom && myUsername && connectionReady) {
+                const messageId = generateMessageId();
+                const message = { type: 'message', room: currentRoom, content: content, sender: myUsername, id: messageId };
+                ws.send(JSON.stringify(message));
+                messageInput.value = '';
+
+                displayMessage(content, true, messageId, myUsername);
+                saveMessageToLocalStorage(content, true, myUsername);
+            }
+        }
+
+        function highlightKeywords(message) {
+        const names = ["john", "kyle", "mike"]; 
         
-        
+            const keywords = {
+                "love": "green",
+                "money": "green",
+                "home": "green",
+                "monpress": "green",
+                "mide sensational": "green",
+                "eksu": "green",
+                "fuck": "red",
+                "danger": "red",
+                "warning": "red",
+                "sad": "red",
+                "sex": "red",// Highlight "good" as red
+                "kill":"yellow"
+            };
+
+            let highlightedMessage = message;
+
+            for (const keyword in keywords) {
+                const color = keywords[keyword];
+                const regex = new RegExp(`\\b${keyword}\\b`, 'gi');
+                highlightedMessage = highlightedMessage.replace(regex, `<span class="highlight-${color}">${keyword}</span>`);
+            }
+
+            return highlightedMessage;
+        }
+
+        function displayMessage(message, isSent, messageId, sender) {
+            if (!messageId) {
+                console.error("Message ID is missing!");
+                return;
+            }
+
+            const highlighted = highlightKeywords(message);
+
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message', isSent ? 'sent' : 'received');
+            messageDiv.innerHTML = `${sender}: ${highlighted}`; // Use innerHTML
+            messageArea.appendChild(messageDiv);
+            messageArea.scrollTop = messageArea.scrollHeight;
+        }
+
+        function generateMessageId() {
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                const r = Math.random() * 16 | 0;
+                const v = c === 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+        }
+
+        function saveMessageToLocalStorage(message, isSent, sender) {
+            if (!currentRoom) return;
+            let storedMessages = JSON.parse(localStorage.getItem(`messages_${currentRoom}`)) || [];
+            storedMessages.push({ message, isSent, sender });
+            localStorage.setItem(`messages_${currentRoom}`, JSON.stringify(storedMessages));
+        }
+
+        function loadMessagesFromLocalStorage() {
+            if (!currentRoom) return;
+            const storedMessages = JSON.parse(localStorage.getItem(`messages_${currentRoom}`)) || [];
+            messageArea.innerHTML = '';
+            storedMessages.forEach(msg => {
+                displayMessage(msg.message, msg.isSent, generateMessageId(), msg.sender);
+            });
+        }
+
+        function clearLocalStorage() {
+            localStorage.removeItem(`messages_${currentRoom}`);
+            messageArea.innerHTML = '';
+            }
     </script>
-</body>
-</html>
