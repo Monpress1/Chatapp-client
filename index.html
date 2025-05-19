@@ -3,280 +3,186 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EKSU ANONYMOUS</title>
+    <title>Anonymous Chat</title>
     <style>
         body {
-            font-family: sans-serif;
-            background-color: #f0f0f0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #e0e0e0; /* Light gray background */
             display: flex;
             flex-direction: column;
-            align-items: center;
-            min-height: 100vh;
             margin: 0;
+            padding: 0;
+            min-height: 100vh;
         }
 
-        #roomInput, button {
-        padding: 8px 12px;
-        margin: 5px;
-        border: none;
-        border-radius: 5px;
-        background-image: linear-gradient(to right, purple, black);
-        color: white;
-        cursor: pointer;
-        }
-        
         #messageArea {
-        width: 80%;
-        max-width: 600px;
-        margin: 20px auto;
-        border: 1px solid #ccc;
-        padding: 10px;
-        overflow-y: auto;
-        height: 200px;
-        background-color: white;
-        border-radius: 8px;
-        display: flex;
-        flex-direction: column;
+            flex-grow: 1;
+            padding: 15px;
+            overflow-y: auto;
+            background-color: #f9f9f9; /* Light chat background */
+            border-radius: 10px 10px 0 0;
+            margin: 10px;
+            display: flex;
+            flex-direction: column;
         }
-        
+
         .message {
-        padding: 8px;
-        margin-bottom: 5px;
-        border-radius: 8px;
-        max-width: 70%;
-        animation: fadeIn 0.5s ease-in-out;
-        align-self: flex-start;
-        clear: both;
+            padding: 10px 15px;
+            margin-bottom: 8px;
+            border-radius: 15px;
+            max-width: 70%;
+            animation: fadeIn 0.3s ease-in-out;
+            clear: both;
+            word-break: break-word;
         }
-        
+
         @keyframes fadeIn {
-        from {
-        opacity: 0;
-        transform: translateY(10px);
+            from {
+                opacity: 0;
+                transform: translateY(5px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
-        to {
-        opacity: 1;
-        transform: translateY(0);
-        }
-        }
-        
+
         .message.sent {
-        align-self: flex-end;
-        background:#03A9F4;
-        color: white;
-        
+            align-self: flex-end;
+            background-color: #dcf8c6; /* WhatsApp sent bubble color */
+            color: #333;
         }
-        
+
         .message.received {
-        background-color: #e0e0e0;
-        color: black;
+            background-color: #fff; /* White received bubble */
+            color: #333;
+            align-self: flex-start;
         }
-        
+
+        .message.image-message {
+            max-width: 60%;
+        }
+
+        .message.image-message img {
+            width: 100%;
+            height: auto;
+            border-radius: 8px;
+        }
+
+        .display {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            background-color: #f0f0f0; /* Input area background */
+            border-top: 1px solid #ccc;
+        }
+
         #messageInput {
-        width: 70%;
-        padding: 8px;
-        margin: 5px;
-        border: 1px solid #ccc;
-        border-radius: 5px;
+            flex-grow: 1;
+            padding: 10px;
+            margin-right: 10px;
+            border: 1px solid #ccc;
+            border-radius: 20px;
         }
-        
-        #messageInput, #messageInput:focus, button {
-        outline: none;
-        }
-        
-        #messageInput{
-        background-image: ;
-        color: black;
-        width:200px;
-        border-radius:8px;
-        height:20px;
-        
-        }
+
         button {
-        background: #03A9F4;
-        color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 20px;
+            background-color: #007bff; /* Blue send button */
+            color: white;
+            cursor: pointer;
         }
-        
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        .image-upload-button {
+            background: none;
+            border: none;
+            padding: 10px;
+            margin-left: 5px;
+            cursor: pointer;
+            font-size: 24px;
+            color: #555;
+            outline: none;
+        }
+
+        .image-upload-button:hover {
+            color: #007bff;
+        }
+
+        #imageUpload {
+            display: none;
+        }
+
+        #loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            z-index: 9999;
+            display: none; /* Hidden by default */
+        }
+
+        .clear-history-button {
+            background-color: #f44336; /* Red clear button */
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px auto;
+            display: block;
+        }
+
+        .clear-history-button:hover {
+            background-color: #d32f2f;
+        }
+
         #notification {
-        position: fixed;
-        top: 60%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        background-color: rgba(0, 0, 222, 0.4);
-        color: white;
-        padding: 20px;
-        border-radius: 10px;
-        z-index: 1000;
-        opacity: 0;
-        width:160px;
-        transition: opacity 0.4s ease-in-out;
+            position: fixed;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #f9f1a5;
+            color: #333;
+            padding: 10px 20px;
+            border-radius: 5px;
+            opacity: 0.8;
+            z-index: 1000;
+            display: none;
         }
-        
-        #notification.show {
-        opacity: 1;
-        }
-        .display{
-        display:flex;
-        }
-        #container {
-        width: 290px;
-        height: 39px;
-        background-color: lightgray;
-        position: relative; 
-        left:5px;
-        
-        /* Needed for absolute positioning of the hidden div */
-        }
-        
-        #trigger { /* The element you hover over */
-        padding: 10px;
-        background-color: gray;
-        cursor: pointer;
-        }
-        #hiddenDiv {
-        display: none; /* Initially hidden */
-        position: absolute; /* Position it within the container */
-        top: 1200%; /* Position below the trigger */
-        left: 0px;
-        width: 100%;
-        background-color: white;
-        padding: 10px;
-        border: 1px solid gray;
-        box-sizing: border-box; /* Include padding and border in width */
-        }
-        
-        #container:hover #hiddenDiv { /* Show #hiddenDiv when hovering over #container */
-        display: block;
-        }
-        .highlight-green { color: green; 
-        font-family:cursive;
-        font-size:larger ;
-        
-        text-shadow: 0 0 1.0px #00ffff, 0 0 2.0px #00ffff, 0 0 3.0px #00ffff;
-        animation: glow 1.5s ease-in-out infinite alternate;
-        }
-        
-        @keyframes glow {
-        to { text-shadow: 0 0 20px red, 0 0 30px black, 0 0 40px #00ffff;}
-        }
-        .highlight-yellow { color: yellow; 
-        font-size: ;
-        
-        text-shadow: 0 0 1.0px #00ffff, 0 0 2.0px #00ffff, 0 0 3.0px #00ffff;
-        animation: glow 1.5s ease-in-out infinite alternate;
-        }
-        
-        @keyframes glow {
-        to { text-shadow: 0 0 20px red, 0 0 30px black, 0 0 40px #00ffff;}
-        }
-        
-        .highlight-red { color: red;
-         
-         
-        font-size: ;
-        
-        text-shadow: 0 0 1.0px #00ffff, 0 0 2.0px #00ffff, 0 0 3.0px #00ffff;
-        animation: glow 1.5s ease-in-out infinite alternate;
-        }
-        
-        @keyframes glow {
-        to { text-shadow: 0 0 20px red, 0 0 30px black, 0 0 40px #00ffff;}
-        }
-        .highlight-yellow { color: yellow; 
-        font-size: ;
-       
-        text-shadow: 0 0 1.0px #00ffff, 0 0 2.0px #00ffff, 0 0 3.0px #00ffff;
-        animation: glow 1.5s ease-in-out infinite alternate;
-        }
-        
-        @keyframes glow {
-        to { text-shadow: 0 0 20px red, 0 0 30px black, 0 0 40px #00ffff;}
-        }
-        
-        .floating-icon {
-        position: fixed; /* Stays in a fixed position on the screen */
-        bottom: 20px; /* Adjust vertical position (distance from bottom) */
-        left: 6px; /* Adjust horizontal position (distance from right) */
-        /* OR use top and left instead of bottom and right */
-        /* top: 20px;
-        left: 20px; */
-        z-index: 100; /* Ensure it's above other content */
-        /* Styling for the icon itself */
-        background-color: #007bff; /* Example background color */
-        color: white; /* Example text color */
-        width: 50px; /* Adjust size */
-        height: 50px;
-        border-radius: 50%; /* Make it circular */
-        display: flex; /* Use flexbox for centering */
-        align-items: center;
-        justify-content: center;
-        font-size: 24px; /* Adjust icon size */
-        box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.3); /* Optional shadow */
-        /* Optional transition for hover effect */
-        transition: transform 0.2s ease-in-out;
-        }
-        
-        .floating-icon:hover {
-        transform: scale(1.1); /* Slightly enlarge on hover */
-        }
-        
-        /* Example of adding an icon (using Font Awesome) */
-        .floating-icon i { /* Target the icon inside the div */
-        /* ... any other specific icon styling ... */
-        }
-        
-        
-        /* Example of adding text to the icon */
-        .floating-icon span {
-        /* ... any specific text styling ... */
-        margin-left: 5px; /* Add some space between icon and text */
-        }
-        
-        /* Example usage in HTML (using Font Awesome) */
-        /* <div class="floating-icon">
-        <i class="fas fa-plus"></i>  </div> */
-        
-        /* Example usage in HTML (with just an image) */
-        /* <div class="floating-icon">
-        <img src="path/to/your/icon.png" alt="Icon">
-        </div> */
-        
     </style>
 </head>
 <body>
-    <br>
-    <div id="container">
-        <div id="trigger">change room</div>
-        <div id="hiddenDiv">
-            <label for="roomInput">Room:</label>
-            <input type="text" id="roomInput" value="GENERAL">
-            <button onclick="joinRoom(document.getElementById('roomInput').value)">CREATE/JOIN</button>
-        </div>
-    </div>
+    <div id="loading">Loading...</div>
     <div id="messageArea"></div>
     <div class="display">
-        <input type="text" id="messageInput">
+        <input type="text" id="messageInput" placeholder="Type a message...">
         <button onclick="sendMessage()">Send</button>
+        <button class="image-upload-button" onclick="document.getElementById('imageUpload').click()">+</button>
+        <input type="file" id="imageUpload" accept="image/*">
     </div>
-    <br><br>
-    <div class="display">
-        <button onclick="clearLocalStorage()">Clear Chat History</button>
-        
-    </div> <br><br>
+    <button class="clear-history-button" onclick="clearLocalStorage()">Clear Chat History</button>
     <div id="notification"></div>
-    </center>
-    <div class="floating-icon">
-<a href="whatsapp://send?text=Chat ANONYMOUS on FlowChat: https://tinyurl.com/yjfxpsxh" target="_blank">
-  <img src="whatsapp.png" alt="WhatsApp" width="33" height="33">  </a>
-</div>
-            <br><br><br><br> <br> <br> <br> <br><br> Created By<a href="http://miportfolio.rf.gd/?i=1"> Eli Monpress</a>
+
     <script>
-        const ws = new WebSocket('wss://websocket-server-6jct.onrender.com'); // **REPLACE WITH YOUR WEBSOCKET URL**
-        let currentRoom = "GENERAL";
+        const ws = new WebSocket('wss://websocket-server-6jct.onrender.com'); // **REPLACE WITH YOUR ACTUAL WEBSOCKET SERVER URL HERE!**
+        const currentRoom = "anonymous"; // Single, fixed room name
         const messageArea = document.getElementById('messageArea');
         const messageHistory = new Map();
         let myUsername = null;
         let connectionReady = false;
+        const loadingDiv = document.getElementById('loading');
+        const imageUpload = document.getElementById('imageUpload');
+
+        loadingDiv.style.display = 'block'; // Show loading initially
 
         const adjectives = ["Happy", "Brave", "Clever", "Silly", "Kind", "Gentle", "Witty", "Curious", "Radiant", "Vibrant"];
         const animals = ["Dog", "Cat", "Lion", "Tiger", "Bear", "Elephant", "Fox", "Rabbit", "Wolf", "Deer"];
@@ -292,6 +198,7 @@
             myUsername = generateUsername();
             console.log("Generated username:", myUsername);
             connectionReady = true;
+            loadingDiv.style.display = 'none'; // Hide loading when connected
             joinRoom(currentRoom);
         };
 
@@ -300,13 +207,22 @@
                 const message = JSON.parse(event.data);
                 if (message && message.room === currentRoom) {
                     let messageId = message.id || generateMessageId();
-                    const messageContent = message.content;
+                    const sender = message.sender;
 
-                    if (messageContent && !messageHistory.has(messageId)) {
-                        messageHistory.set(messageId, messageContent);
-                        const isSent = message.sender === myUsername;
-                        displayMessage(messageContent, isSent, messageId, message.sender);
-                        saveMessageToLocalStorage(messageContent, isSent, message.sender);
+                    if (message.type === 'message') {
+                        const messageContent = message.content;
+                        if (messageContent && !messageHistory.has(messageId)) {
+                            messageHistory.set(messageId, messageContent);
+                            const isSent = sender === myUsername;
+                            displayMessage(messageContent, isSent, messageId, sender);
+                            saveMessageToLocalStorage(messageContent, isSent, sender);
+                        }
+                    } else if (message.type === 'image') {
+                        const imageData = message.data;
+                        if (imageData) {
+                            displayImage(imageData, sender === myUsername, sender);
+                            saveImageToLocalStorage(imageData, sender === myUsername, sender);
+                        }
                     }
                 }
             } catch (error) {
@@ -315,11 +231,15 @@
             }
         };
 
-        ws.onerror = (error) => { console.error("WebSocket error:", error); };
+        ws.onerror = (error) => {
+            console.error("WebSocket error:", error);
+            loadingDiv.style.display = 'block'; // Re-show loading on error
+        };
         ws.onclose = () => {
             console.log('Disconnected from WebSocket server');
             messageArea.innerHTML += "<p>Connection closed.</p>";
             connectionReady = false;
+            loadingDiv.style.display = 'block'; // Re-show loading on close
         };
 
         function showNotification(message) {
@@ -333,16 +253,13 @@
         }
 
         function joinRoom(roomId) {
-            if (currentRoom && currentRoom !== roomId) {
-                ws.send(JSON.stringify({ type: 'leave', room: currentRoom, user: myUsername }));
-            }
             currentRoom = roomId;
-
             if (connectionReady) {
                 ws.send(JSON.stringify({ type: 'join', room: roomId, user: myUsername }));
                 messageArea.innerHTML = "";
-                showNotification(`Welcome, you joined ${roomId}! room`);
+                showNotification(`Joined chat`);
                 loadMessagesFromLocalStorage();
+                loadImageMessagesFromLocalStorage();
             } else {
                 console.log("Connection not yet ready. Waiting to join room.");
             }
@@ -363,9 +280,32 @@
             }
         }
 
+        function sendImage(base64Image) {
+            if (currentRoom && myUsername && connectionReady) {
+                displayImage(base64Image, true, myUsername); // Display the image immediately
+                saveImageToLocalStorage(base64Image, true, myUsername); // Save it locally
+                ws.send(JSON.stringify({ type: 'image', room: currentRoom, data: base64Image, sender: myUsername }));
+            } else {
+                console.log("Not connected or no room selected to send image.");
+            }
+        }
+
+        imageUpload.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    const base64Data = reader.result.split(',')[1]; // Extract the Base64 part after the data URL prefix
+                    sendImage(base64Data);
+                };
+                reader.readAsDataURL(file);
+            }
+            event.target.value = null; // Reset the file input
+        });
+
         function highlightKeywords(message) {
-        const names = ["john", "kyle", "mike"]; 
-        
+        const names = ["john", "kyle", "mike"];
+
             const keywords = {
                 "love": "green",
                 "money": "green",
@@ -407,6 +347,17 @@
             messageArea.scrollTop = messageArea.scrollHeight;
         }
 
+        function displayImage(base64Image, isSent, sender) {
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message', isSent ? 'sent' : 'received', 'image-message');
+            const img = document.createElement('img');
+            img.src = `data:image/png;base64,${base64Image}`; // Assuming PNG format
+            messageDiv.innerHTML = `${sender} sent an image: <br>`;
+            messageDiv.appendChild(img);
+            messageArea.appendChild(messageDiv);
+            messageArea.scrollTop = messageArea.scrollHeight;
+        }
+
         function generateMessageId() {
             return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
                 const r = Math.random() * 16 | 0;
@@ -418,21 +369,48 @@
         function saveMessageToLocalStorage(message, isSent, sender) {
             if (!currentRoom) return;
             let storedMessages = JSON.parse(localStorage.getItem(`messages_${currentRoom}`)) || [];
-            storedMessages.push({ message, isSent, sender });
+            storedMessages.push({ type: 'text', content: message, isSent, sender });
+            localStorage.setItem(`messages_${currentRoom}`, JSON.stringify(storedMessages));
+        }
+
+        function saveImageToLocalStorage(base64Image, isSent, sender) {
+            if (!currentRoom) return;
+            let storedMessages = JSON.parse(localStorage.getItem(`messages_${currentRoom}`)) || [];
+            storedMessages.push({ type: 'image', data: base64Image, isSent, sender });
             localStorage.setItem(`messages_${currentRoom}`, JSON.stringify(storedMessages));
         }
 
         function loadMessagesFromLocalStorage() {
             if (!currentRoom) return;
             const storedMessages = JSON.parse(localStorage.getItem(`messages_${currentRoom}`)) || [];
-            messageArea.innerHTML = '';
-            storedMessages.forEach(msg => {
-                displayMessage(msg.message, msg.isSent, generateMessageId(), msg.sender);
+            storedMessages.filter(msg => msg.type === 'text').forEach(msg => {
+                displayMessage(msg.content, msg.isSent, generateMessageId(), msg.sender);
+            });
+        }
+
+        function loadImageMessagesFromLocalStorage() {
+            if (!currentRoom) return;
+            const storedMessages = JSON.parse(localStorage.getItem(`messages_${currentRoom}`)) || [];
+            storedMessages.filter(msg => msg.type === 'image').forEach(msg => {
+                displayImage(msg.data, msg.isSent, msg.sender);
             });
         }
 
         function clearLocalStorage() {
             localStorage.removeItem(`messages_${currentRoom}`);
             messageArea.innerHTML = '';
+        }
+
+        // Immediately join the single room on connection
+        function joinRoom(roomId) {
+            if (connectionReady) {
+                ws.send(JSON.stringify({ type: 'join', room: roomId, user: myUsername }));
+                messageArea.innerHTML = "";
+                showNotification(`Joined chat`);
+                loadMessagesFromLocalStorage();
+                loadImageMessagesFromLocalStorage();
             }
+        }
     </script>
+</body>
+</html>
