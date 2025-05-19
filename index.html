@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -158,6 +158,22 @@
             z-index: 1000;
             display: none;
         }
+
+        .highlight-green {
+            color: green;
+            font-weight: bold;
+        }
+
+        .highlight-red {
+            color: red;
+            font-weight: bold;
+        }
+
+        .highlight-yellow {
+            color: yellow;
+            font-weight: bold;
+            background-color: black;
+        }
     </style>
 </head>
 <body>
@@ -176,7 +192,7 @@
         const ws = new WebSocket('wss://websocket-server-6jct.onrender.com'); // **REPLACE WITH YOUR ACTUAL WEBSOCKET SERVER URL HERE!**
         const currentRoom = "anonymous"; // Single, fixed room name
         const messageArea = document.getElementById('messageArea');
-        const messageHistory = new Map();
+        const sentMessageIds = new Set(); // To track messages sent by the current user
         let myUsername = null;
         let connectionReady = false;
         const loadingDiv = document.getElementById('loading');
@@ -206,22 +222,27 @@
             try {
                 const message = JSON.parse(event.data);
                 if (message && message.room === currentRoom) {
-                    let messageId = message.id || generateMessageId();
+                    const messageId = message.id || generateMessageId();
                     const sender = message.sender;
+                     const isSent = sender === myUsername;
 
                     if (message.type === 'message') {
                         const messageContent = message.content;
-                        if (messageContent && !messageHistory.has(messageId)) {
-                            messageHistory.set(messageId, messageContent);
-                            const isSent = sender === myUsername;
+                        if (messageContent && !(isSent && sentMessageIds.has(messageId))) {
                             displayMessage(messageContent, isSent, messageId, sender);
+                             if (isSent) {
+                                sentMessageIds.add(messageId); // Mark this sent message as displayed
+                            }
                             saveMessageToLocalStorage(messageContent, isSent, sender);
                         }
                     } else if (message.type === 'image') {
                         const imageData = message.data;
-                        if (imageData) {
-                            displayImage(imageData, sender === myUsername, sender);
-                            saveImageToLocalStorage(imageData, sender === myUsername, sender);
+                         if (imageData && !(isSent && sentMessageIds.has(messageId))) {
+                            displayImage(imageData, isSent, sender);
+                             if (isSent) {
+                                sentMessageIds.add(messageId); // Mark this sent message as displayed
+                            }
+                            saveImageToLocalStorage(imageData, isSent, sender);
                         }
                     }
                 }
@@ -274,17 +295,13 @@
                 const message = { type: 'message', room: currentRoom, content: content, sender: myUsername, id: messageId };
                 ws.send(JSON.stringify(message));
                 messageInput.value = '';
-
-                displayMessage(content, true, messageId, myUsername);
-                saveMessageToLocalStorage(content, true, myUsername);
             }
         }
 
         function sendImage(base64Image) {
-            if (currentRoom && myUsername && connectionReady) {
-                displayImage(base64Image, true, myUsername); // Display the image immediately
-                saveImageToLocalStorage(base64Image, true, myUsername); // Save it locally
-                ws.send(JSON.stringify({ type: 'image', room: currentRoom, data: base64Image, sender: myUsername }));
+             if (currentRoom && myUsername && connectionReady) {
+                const messageId = generateMessageId();
+                ws.send(JSON.stringify({ type: 'image', room: currentRoom, data: base64Image, sender: myUsername, id: messageId }));
             } else {
                 console.log("Not connected or no room selected to send image.");
             }
@@ -347,7 +364,12 @@
             messageArea.scrollTop = messageArea.scrollHeight;
         }
 
-        function displayImage(base64Image, isSent, sender) {
+         function displayImage(base64Image, isSent, sender) {
+            if (!base64Image) {
+                console.error("Image data is missing!");
+                return;
+            }
+
             const messageDiv = document.createElement('div');
             messageDiv.classList.add('message', isSent ? 'sent' : 'received', 'image-message');
             const img = document.createElement('img');
