@@ -1,438 +1,648 @@
  <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Anonymous Chat</title>
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #e0e0e0; /* Light gray background */
-            display: flex;
-            flex-direction: column;
-            margin: 0;
-            padding: 0;
-            min-height: 100vh;
-        }
-
-        #messageArea {
-            flex-grow: 1;
-            padding: 15px;
-            overflow-y: auto;
-            background-color: #f9f9f9; /* Light chat background */
-            border-radius: 10px 10px 0 0;
-            margin: 10px;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .message {
-            padding: 10px 15px;
-            margin-bottom: 8px;
-            border-radius: 15px;
-            max-width: 70%;
-            animation: fadeIn 0.3s ease-in-out;
-            clear: both;
-            word-break: break-word;
-        }
-
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(5px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .message.sent {
-            align-self: flex-end;
-            background-color: #dcf8c6; /* WhatsApp sent bubble color */
-            color: #333;
-        }
-
-        .message.received {
-            background-color: #fff; /* White received bubble */
-            color: #333;
-            align-self: flex-start;
-        }
-
-        .message.image-message {
-            max-width: 60%;
-        }
-
-        .message.image-message img {
-            width: 100%;
-            height: auto;
-            border-radius: 8px;
-        }
-
-        .display {
-            display: flex;
-            align-items: center;
-            padding: 10px;
-            background-color: #f0f0f0; /* Input area background */
-            border-top: 1px solid #ccc;
-        }
-
-        #messageInput {
-            flex-grow: 1;
-            padding: 10px;
-            margin-right: 10px;
-            border: 1px solid #ccc;
-            border-radius: 20px;
-        }
-
-        button {
-            padding: 10px 15px;
-            border: none;
-            border-radius: 20px;
-            background-color: #007bff; /* Blue send button */
-            color: white;
-            cursor: pointer;
-        }
-
-        button:hover {
-            background-color: #0056b3;
-        }
-
-        .image-upload-button {
-            background: none;
-            border: none;
-            padding: 10px;
-            margin-left: 5px;
-            cursor: pointer;
-            font-size: 24px;
-            color: #555;
-            outline: none;
-        }
-
-        .image-upload-button:hover {
-            color: #007bff;
-        }
-
-        #imageUpload {
-            display: none;
-        }
-
-        #loading {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background-color: rgba(0, 0, 0, 0.7);
-            color: white;
-            padding: 20px;
-            border-radius: 10px;
-            z-index: 9999;
-            display: none; /* Hidden by default */
-        }
-
-        .clear-history-button {
-            background-color: #f44336; /* Red clear button */
-            color: white;
-            border: none;
-            padding: 8px 12px;
-            border-radius: 5px;
-            cursor: pointer;
-            margin: 10px auto;
-            display: block;
-        }
-
-        .clear-history-button:hover {
-            background-color: #d32f2f;
-        }
-
-        #notification {
-            position: fixed;
-            top: 10px;
-            left: 50%;
-            transform: translateX(-50%);
-            background-color: #f9f1a5;
-            color: #333;
-            padding: 10px 20px;
-            border-radius: 5px;
-            opacity: 0.8;
-            z-index: 1000;
-            display: none;
-        }
-
-        .highlight-green {
-            color: green;
-            font-weight: bold;
-        }
-
-        .highlight-red {
-            color: red;
-            font-weight: bold;
-        }
-
-        .highlight-yellow {
-            color: yellow;
-            font-weight: bold;
-            background-color: black;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Anonymous Chat</title>
+  <link rel="stylesheet" href="styles.css" />
 </head>
+<style>
+  
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #e0e0e0;
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+#messageArea {
+  flex-grow: 1;
+  padding: 15px;
+  overflow-y: auto;
+  background-color: #f9f9f9;
+  border-radius: 10px 10px 0 0;
+  margin: 10px;
+  display: flex;
+  flex-direction: column;
+}
+
+.message {
+  padding: 10px 15px;
+  margin-bottom: 8px;
+  border-radius: 15px;
+  max-width: 70%;
+  animation: fadeIn 0.3s ease-in-out;
+  clear: both;
+  word-break: break-word;
+  cursor: pointer;
+  position: relative;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.message.sent {
+  align-self: flex-end;
+  background-color: #dcf8c6;
+  color: #333;
+}
+
+.message.received {
+  background-color: #fff;
+  color: #333;
+  align-self: flex-start;
+}
+
+.message.image-message {
+  max-width: 60%;
+}
+
+.message.image-message img {
+  width: 100%;
+  height: auto;
+  border-radius: 8px;
+}
+
+.message .timestamp {
+  font-size: 0.75rem;
+  color: #888;
+  display: block;
+  margin-top: 4px;
+  text-align: right;
+}
+
+.display {
+  display: flex;
+  align-items: center;
+  padding: 10px;
+  background-color: #f0f0f0;
+  border-top: 1px solid #ccc;
+}
+
+#messageInput {
+  flex-grow: 1;
+  padding: 10px;
+  margin-right: 10px;
+  border: 1px solid #ccc;
+  border-radius: 20px;
+}
+
+button {
+  padding: 10px 15px;
+  border: none;
+  border-radius: 20px;
+  background-color: #007bff;
+  color: white;
+  cursor: pointer;
+}
+
+button:hover {
+  background-color: #0056b3;
+}
+
+.image-upload-button {
+  background: none;
+  border: none;
+  padding: 10px;
+  margin-left: 5px;
+  cursor: pointer;
+  font-size: 24px;
+  color: #555;
+  outline: none;
+}
+
+.image-upload-button:hover {
+  color: #007bff;
+}
+
+#imageUpload {
+  display: none;
+}
+
+#loading {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 20px;
+  border-radius: 10px;
+  z-index: 9999;
+  display: none;
+}
+
+.clear-history-button {
+  background-color: #f44336;
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 5px;
+  cursor: pointer;
+  margin: 10px auto;
+  display: block;
+}
+
+.clear-history-button:hover {
+  background-color: #d32f2f;
+}
+
+#notification {
+  position: fixed;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #f9f1a5;
+  color: #333;
+  padding: 10px 20px;
+  border-radius: 5px;
+  opacity: 0.8;
+  z-index: 1000;
+  display: none;
+}
+
+/* Modal styles */
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 10000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  background-color: rgba(0,0,0,0.4);
+}
+
+.modal-content {
+  background-color: #fefefe;
+  margin: 10% auto;
+  padding: 20px;
+  border-radius: 10px;
+  width: 90%;
+  max-width: 400px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+}
+
+/* Highlight keyword colors */
+.highlight-green {
+  background-color: #a0d995;
+  font-weight: bold;
+  border-radius: 3px;
+  padding: 0 2px;
+}
+
+.highlight-red {
+  background-color: #f88383;
+  font-weight: bold;
+  border-radius: 3px;
+  padding: 0 2px;
+}
+
+.highlight-yellow {
+  background-color: #fff176;
+  font-weight: bold;
+  border-radius: 3px;
+  padding: 0 2px;
+}
+</style>
 <body>
-    <div id="loading">Loading...</div>
-    <div id="messageArea"></div>
-    <div class="display">
-        <input type="text" id="messageInput" placeholder="Type a message...">
-        <button onclick="sendMessage()">Send</button>
-        <button class="image-upload-button" onclick="document.getElementById('imageUpload').click()">+</button>
-        <input type="file" id="imageUpload" accept="image/*">
+  <div id="loading">Loading...</div>
+
+  <!-- Chat messages -->
+  <div id="messageArea"></div>
+
+  <!-- Message input -->
+  <div class="display">
+    <input type="text" id="messageInput" placeholder="Type a message..." />
+    <button onclick="sendMessage()">Send</button>
+    <button class="image-upload-button" onclick="document.getElementById('imageUpload').click()">+</button>
+    <input type="file" id="imageUpload" accept="image/*" />
+  </div>
+
+  <button class="clear-history-button" onclick="clearLocalStorage()">Clear Chat History</button>
+
+  <div id="notification"></div>
+
+  <!-- Profile Setup Modal -->
+  <div id="profileModal" class="modal">
+    <div class="modal-content">
+      <h2>Enter Your Profile</h2>
+      <input type="text" id="usernameInput" placeholder="Enter your username" />
+
+      <div>
+        <p>What do you like?</p>
+        <label><input type="checkbox" value="love" /> Love</label>
+        <label><input type="checkbox" value="dogs" /> Dogs</label>
+        <label><input type="checkbox" value="cats" /> Cats</label>
+        <label><input type="checkbox" value="music" /> Music</label>
+        <label><input type="checkbox" value="sex" /> Sex</label>
+        <label><input type="checkbox" value="relationship" /> Relationship</label>
+      </div>
+
+      <div>
+        <p>Your Gender:</p>
+        <select id="genderSelect">
+          <option value="prefer_not_say">Prefer not to say</option>
+          <option value="male">Male</option>
+          <option value="female">Female</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+
+      <label><input type="checkbox" id="ageConfirm" /> I confirm I'm above 18</label>
+      <br />
+      <button onclick="submitProfile()">Continue</button>
     </div>
-    <button class="clear-history-button" onclick="clearLocalStorage()">Clear Chat History</button>
-    <div id="notification"></div>
+  </div>
 
-    <script>
-        const ws = new WebSocket('wss://websocket-server-6jct.onrender.com'); // **REPLACE WITH YOUR ACTUAL WEBSOCKET SERVER URL HERE!**
-        const currentRoom = "anonymous"; // Single, fixed room name
-        const messageArea = document.getElementById('messageArea');
-        const sentMessageIds = new Set(); // To track messages sent by the current user
-        let myUsername = null;
-        let connectionReady = false;
-        const loadingDiv = document.getElementById('loading');
-        const imageUpload = document.getElementById('imageUpload');
+  <!-- Profile Viewer Modal -->
+  <div id="viewerModal" class="modal">
+    <div class="modal-content">
+      <h2>User Profile</h2>
+      <p><strong>Username:</strong> <span id="viewerUsername"></span></p>
+      <p><strong>Gender:</strong> <span id="viewerGender"></span></p>
+      <p><strong>Likes:</strong> <span id="viewerLikes"></span></p>
+      <button onclick="closeViewer()">Close</button>
+    </div>
+  </div>
 
-        loadingDiv.style.display = 'block'; // Show loading initially
+  <script>
+    
+const ws = new WebSocket('wss://websocket-server-6jct.onrender.com'); // Replace with your server URL
+const messageArea = document.getElementById('messageArea');
+const messageInput = document.getElementById('messageInput');
+const imageUpload = document.getElementById('imageUpload');
+const loadingDiv = document.getElementById('loading');
+const notificationDiv = document.getElementById('notification');
 
-        const adjectives = ["Happy", "Brave", "Clever", "Silly", "Kind", "Gentle", "Witty", "Curious", "Radiant", "Vibrant"];
-        const animals = ["Dog", "Cat", "Lion", "Tiger", "Bear", "Elephant", "Fox", "Rabbit", "Wolf", "Deer"];
+let currentRoom = "anonymous";
+let myProfile = null; // Will hold username, likes, gender, isAdult
+let connectionReady = false;
+const messageHistory = new Map();
 
-        function generateUsername() {
-            const randomAdjective = adjectives[Math.floor(Math.random() * adjectives.length)];
-            const randomAnimal = animals[Math.floor(Math.random() * animals.length)];
-            return randomAdjective + " " + randomAnimal;
-        }
+loadingDiv.style.display = 'block';
 
-        ws.onopen = () => {
-            console.log('Connected to WebSocket server!');
-            myUsername = generateUsername();
-            console.log("Generated username:", myUsername);
-            connectionReady = true;
-            loadingDiv.style.display = 'none'; // Hide loading when connected
-            joinRoom(currentRoom);
-        };
+// ----- USER PROFILE MODAL -----
+function showProfileModal() {
+  // Create modal HTML
+  const modalHTML = `
+    <div id="profileModal" style="
+      position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6);
+      display:flex; align-items:center; justify-content:center; z-index:10000;">
+      <div style="background:#fff; padding:20px; border-radius:8px; width:320px;">
+        <h2>Set up your profile</h2>
+        <label>Username:<br><input id="profileUsername" type="text" maxlength="20" placeholder="Your name" required></label><br><br>
+        <fieldset>
+          <legend>Things you like:</legend>
+          <label><input type="checkbox" value="love"> Love</label><br>
+          <label><input type="checkbox" value="dogs"> Dogs</label><br>
+          <label><input type="checkbox" value="cats"> Cats</label><br>
+          <label><input type="checkbox" value="music"> Music</label><br>
+          <label><input type="checkbox" value="sex"> Sex</label><br>
+          <label><input type="checkbox" value="relationship"> Relationship</label>
+        </fieldset><br>
+        <label>Gender:<br>
+          <select id="profileGender" required>
+            <option value="" disabled selected>Select gender</option>
+            <option value="Male">Male</option>
+            <option value="Female">Female</option>
+            <option value="Other">Other</option>
+            <option value="Prefer not to say">Prefer not to say</option>
+          </select>
+        </label><br><br>
+        <label><input type="checkbox" id="profileAdult" required> I confirm I am over 18</label><br><br>
+        <button id="profileSaveBtn">Save Profile</button>
+      </div>
+    </div>
+  `;
+  document.body.insertAdjacentHTML('beforeend', modalHTML);
+  const modal = document.getElementById('profileModal');
+  const saveBtn = document.getElementById('profileSaveBtn');
 
-        ws.onmessage = (event) => {
-            try {
-                const message = JSON.parse(event.data);
-                if (message && message.room === currentRoom) {
-                    const messageId = message.id || generateMessageId();
-                    const sender = message.sender;
-                     const isSent = sender === myUsername;
+  saveBtn.onclick = () => {
+    const username = document.getElementById('profileUsername').value.trim();
+    const gender = document.getElementById('profileGender').value;
+    const adultCheckbox = document.getElementById('profileAdult').checked;
+    const likesCheckboxes = modal.querySelectorAll('input[type=checkbox]:not(#profileAdult):checked');
+    const likes = Array.from(likesCheckboxes).map(cb => cb.value);
 
-                    if (message.type === 'message') {
-                        const messageContent = message.content;
-                        if (messageContent && !(isSent && sentMessageIds.has(messageId))) {
-                            displayMessage(messageContent, isSent, messageId, sender);
-                             if (isSent) {
-                                sentMessageIds.add(messageId); // Mark this sent message as displayed
-                            }
-                            saveMessageToLocalStorage(messageContent, isSent, sender);
-                        }
-                    } else if (message.type === 'image') {
-                        const imageData = message.data;
-                         if (imageData && !(isSent && sentMessageIds.has(messageId))) {
-                            displayImage(imageData, isSent, sender);
-                             if (isSent) {
-                                sentMessageIds.add(messageId); // Mark this sent message as displayed
-                            }
-                            saveImageToLocalStorage(imageData, isSent, sender);
-                        }
-                    }
-                }
-            } catch (error) {
-                console.error("Error parsing message:", error);
-                console.log("Raw message data:", event.data);
-            }
-        };
+    if (!username) {
+      alert('Please enter a username.');
+      return;
+    }
+    if (!gender) {
+      alert('Please select your gender.');
+      return;
+    }
+    if (!adultCheckbox) {
+      alert('You must confirm you are over 18.');
+      return;
+    }
 
-        ws.onerror = (error) => {
-            console.error("WebSocket error:", error);
-            loadingDiv.style.display = 'block'; // Re-show loading on error
-        };
-        ws.onclose = () => {
-            console.log('Disconnected from WebSocket server');
-            messageArea.innerHTML += "<p>Connection closed.</p>";
-            connectionReady = false;
-            loadingDiv.style.display = 'block'; // Re-show loading on close
-        };
+    myProfile = { username, gender, likes, isAdult: adultCheckbox };
+    localStorage.setItem('myProfile', JSON.stringify(myProfile));
+    modal.remove();
+    initWebSocket();
+  };
+}
 
-        function showNotification(message) {
-            const notificationDiv = document.getElementById('notification');
-            notificationDiv.textContent = message;
-            notificationDiv.classList.add('show');
+// Load profile from localStorage or show modal
+function loadOrCreateProfile() {
+  const savedProfile = localStorage.getItem('myProfile');
+  if (savedProfile) {
+    myProfile = JSON.parse(savedProfile);
+    initWebSocket();
+  } else {
+    showProfileModal();
+  }
+}
 
-            setTimeout(() => {
-                notificationDiv.classList.remove('show');
-            }, 3000);
-        }
+// ----- WEBSOCKET AND CHAT HANDLERS -----
+function initWebSocket() {
+  ws.onopen = () => {
+    console.log('Connected to WebSocket server!');
+    connectionReady = true;
+    loadingDiv.style.display = 'none';
+    joinRoom(currentRoom);
+  };
 
-        function joinRoom(roomId) {
-            currentRoom = roomId;
-            if (connectionReady) {
-                ws.send(JSON.stringify({ type: 'join', room: roomId, user: myUsername }));
-                messageArea.innerHTML = "";
-                showNotification(`Joined chat`);
-                loadMessagesFromLocalStorage();
-                loadImageMessagesFromLocalStorage();
-            } else {
-                console.log("Connection not yet ready. Waiting to join room.");
-            }
-        }
+  ws.onmessage = (event) => {
+    try {
+      const message = JSON.parse(event.data);
+      if (message && message.room === currentRoom) {
+        handleIncomingMessage(message);
+      }
+    } catch (err) {
+      console.error('Error parsing message:', err);
+    }
+  };
 
-        function sendMessage() {
-            const messageInput = document.getElementById('messageInput');
-            const content = messageInput.value;
+  ws.onerror = (error) => {
+    console.error('WebSocket error:', error);
+    loadingDiv.style.display = 'block';
+  };
 
-            if (content.trim() !== "" && currentRoom && myUsername && connectionReady) {
-                const messageId = generateMessageId();
-                const message = { type: 'message', room: currentRoom, content: content, sender: myUsername, id: messageId };
-                ws.send(JSON.stringify(message));
-                messageInput.value = '';
-            }
-        }
+  ws.onclose = () => {
+    console.log('Disconnected from WebSocket');
+    connectionReady = false;
+    loadingDiv.style.display = 'block';
+  };
+}
 
-        function sendImage(base64Image) {
-             if (currentRoom && myUsername && connectionReady) {
-                const messageId = generateMessageId();
-                ws.send(JSON.stringify({ type: 'image', room: currentRoom, data: base64Image, sender: myUsername, id: messageId }));
-            } else {
-                console.log("Not connected or no room selected to send image.");
-            }
-        }
+function joinRoom(roomId) {
+  if (!connectionReady) return;
+  ws.send(JSON.stringify({ type: 'join', room: roomId, user: myProfile.username }));
+  messageArea.innerHTML = "";
+  showNotification(`Joined room: ${roomId}`);
+  loadMessagesFromLocalStorage();
+}
 
-        imageUpload.addEventListener('change', (event) => {
-            const file = event.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onloadend = () => {
-                    const base64Data = reader.result.split(',')[1]; // Extract the Base64 part after the data URL prefix
-                    sendImage(base64Data);
-                };
-                reader.readAsDataURL(file);
-            }
-            event.target.value = null; // Reset the file input
-        });
+function handleIncomingMessage(message) {
+  const { type, sender, content, data, id, profile, timestamp } = message;
+  if (!id) return;
 
-        function highlightKeywords(message) {
-        const names = ["john", "kyle", "mike"];
+  // Skip duplicate
+  if (messageHistory.has(id)) return;
+  messageHistory.set(id, true);
 
-            const keywords = {
-                "love": "green",
-                "money": "green",
-                "home": "green",
-                "monpress": "green",
-                "mide sensational": "green",
-                "eksu": "green",
-                "fuck": "red",
-                "danger": "red",
-                "warning": "red",
-                "sad": "red",
-                "sex": "red",// Highlight "good" as red
-                "kill":"yellow"
-            };
+  const isSentByMe = sender === myProfile.username;
 
-            let highlightedMessage = message;
+  // Only display messages that were NOT sent by the current user
+  if (!isSentByMe) {
+    if (type === 'message') {
+      displayMessage(content, isSentByMe, id, sender, profile, timestamp);
+      saveMessageToLocalStorage(message);
+    } else if (type === 'image') {
+      displayImage(data, isSentByMe, id, sender, profile, timestamp);
+      saveMessageToLocalStorage(message);
+    }
+  }
+}
 
-            for (const keyword in keywords) {
-                const color = keywords[keyword];
-                const regex = new RegExp(`\\b${keyword}\\b`, 'gi');
-                highlightedMessage = highlightedMessage.replace(regex, `<span class="highlight-${color}">${keyword}</span>`);
-            }
 
-            return highlightedMessage;
-        }
+// ----- DISPLAY FUNCTIONS -----
+function highlightKeywords(text) {
+  const keywords = {
+    love: "green",
+    money: "green",
+    home: "green",
+    monpress: "green",
+    "mide sensational": "green",
+    eksu: "green",
+    fuck: "red",
+    danger: "red",
+    warning: "red",
+    sad: "red",
+    sex: "red",
+    kill: "yellow",
+  };
 
-        function displayMessage(message, isSent, messageId, sender) {
-            if (!messageId) {
-                console.error("Message ID is missing!");
-                return;
-            }
+  let result = text;
 
-            const highlighted = highlightKeywords(message);
+  for (const [keyword, color] of Object.entries(keywords)) {
+    const regex = new RegExp(`\\b${keyword}\\b`, 'gi');
+    result = result.replace(regex, match => `<span style="color:${color};font-weight:bold;">${match}</span>`);
+  }
+  return result;
+}
 
-            const messageDiv = document.createElement('div');
-            messageDiv.classList.add('message', isSent ? 'sent' : 'received');
-            messageDiv.innerHTML = `${sender}: ${highlighted}`; // Use innerHTML
-            messageArea.appendChild(messageDiv);
-            messageArea.scrollTop = messageArea.scrollHeight;
-        }
+function displayMessage(text, isSent, id, sender, profile = {}, timestamp = null) {
+  const msgDiv = document.createElement('div');
+  msgDiv.classList.add('message', isSent ? 'sent' : 'received');
+  msgDiv.dataset.sender = sender;
+  msgDiv.dataset.profile = JSON.stringify(profile);
+  msgDiv.dataset.timestamp = timestamp || new Date().toISOString();
 
-         function displayImage(base64Image, isSent, sender) {
-            if (!base64Image) {
-                console.error("Image data is missing!");
-                return;
-            }
+  const highlightedText = highlightKeywords(text);
+  msgDiv.innerHTML = `<strong>${sender}</strong>: ${highlightedText}`;
 
-            const messageDiv = document.createElement('div');
-            messageDiv.classList.add('message', isSent ? 'sent' : 'received', 'image-message');
-            const img = document.createElement('img');
-            img.src = `data:image/png;base64,${base64Image}`; // Assuming PNG format
-            messageDiv.innerHTML = `${sender} sent an image: <br>`;
-            messageDiv.appendChild(img);
-            messageArea.appendChild(messageDiv);
-            messageArea.scrollTop = messageArea.scrollHeight;
-        }
+  const timeSpan = document.createElement('span');
+  timeSpan.classList.add('timestamp');
+  timeSpan.textContent = new Date(msgDiv.dataset.timestamp).toLocaleTimeString();
+  msgDiv.appendChild(timeSpan);
 
-        function generateMessageId() {
-            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-                const r = Math.random() * 16 | 0;
-                const v = c === 'x' ? r : (r & 0x3 | 0x8);
-                return v.toString(16);
-            });
-        }
+  messageArea.appendChild(msgDiv);
+  messageArea.scrollTop = messageArea.scrollHeight;
 
-        function saveMessageToLocalStorage(message, isSent, sender) {
-            if (!currentRoom) return;
-            let storedMessages = JSON.parse(localStorage.getItem(`messages_${currentRoom}`)) || [];
-            storedMessages.push({ type: 'text', content: message, isSent, sender });
-            localStorage.setItem(`messages_${currentRoom}`, JSON.stringify(storedMessages));
-        }
+  // Add click listener to show profile modal
+  msgDiv.onclick = () => showUserProfileModal(sender, profile);
+}
 
-        function saveImageToLocalStorage(base64Image, isSent, sender) {
-            if (!currentRoom) return;
-            let storedMessages = JSON.parse(localStorage.getItem(`messages_${currentRoom}`)) || [];
-            storedMessages.push({ type: 'image', data: base64Image, isSent, sender });
-            localStorage.setItem(`messages_${currentRoom}`, JSON.stringify(storedMessages));
-        }
 
-        function loadMessagesFromLocalStorage() {
-            if (!currentRoom) return;
-            const storedMessages = JSON.parse(localStorage.getItem(`messages_${currentRoom}`)) || [];
-            storedMessages.filter(msg => msg.type === 'text').forEach(msg => {
-                displayMessage(msg.content, msg.isSent, generateMessageId(), msg.sender);
-            });
-        }
+function displayImage(base64, isSent, id, sender, profile = {}, timestamp = null) {
+  const msgDiv = document.createElement('div');
+  msgDiv.classList.add('message', isSent ? 'sent' : 'received', 'image-message');
+  msgDiv.dataset.sender = sender;
+  msgDiv.dataset.profile = JSON.stringify(profile);
+  msgDiv.dataset.timestamp = timestamp || new Date().toISOString();
 
-        function loadImageMessagesFromLocalStorage() {
-            if (!currentRoom) return;
-            const storedMessages = JSON.parse(localStorage.getItem(`messages_${currentRoom}`)) || [];
-            storedMessages.filter(msg => msg.type === 'image').forEach(msg => {
-                displayImage(msg.data, msg.isSent, msg.sender);
-            });
-        }
+  msgDiv.innerHTML = `<strong>${sender}</strong> sent an image:<br>`;
+  const img = document.createElement('img');
+  img.src = `data:image/png;base64,${base64}`;
+  img.style.maxWidth = '100%';
+  img.style.borderRadius = '8px';
+  msgDiv.appendChild(img);
 
-        function clearLocalStorage() {
-            localStorage.removeItem(`messages_${currentRoom}`);
-            messageArea.innerHTML = '';
-        }
+  const timeSpan = document.createElement('span');
+  timeSpan.classList.add('timestamp');
+  timeSpan.textContent = new Date(msgDiv.dataset.timestamp).toLocaleTimeString();
+  msgDiv.appendChild(timeSpan);
 
-        // Immediately join the single room on connection
-        function joinRoom(roomId) {
-            if (connectionReady) {
-                ws.send(JSON.stringify({ type: 'join', room: roomId, user: myUsername }));
-                messageArea.innerHTML = "";
-                showNotification(`Joined chat`);
-                loadMessagesFromLocalStorage();
-                loadImageMessagesFromLocalStorage();
-            }
-        }
-    </script>
+  messageArea.appendChild(msgDiv);
+  messageArea.scrollTop = messageArea.scrollHeight;
+
+  msgDiv.onclick = () => showUserProfileModal(sender, profile);
+}
+
+// ----- PROFILE MODAL ON MESSAGE CLICK -----
+function showUserProfileModal(username, profile = {}) {
+  const { gender = 'Unknown', likes = [] } = profile;
+  const likesList = likes.length ? likes.join(', ') : 'No likes specified';
+
+  const modalHTML = `
+    <div id="userProfileModal" style="
+      position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6);
+      display:flex; align-items:center; justify-content:center; z-index:10000;">
+      <div style="background:#fff; padding:20px; border-radius:8px; width:280px; text-align:center;">
+        <h3>${username}'s Profile</h3>
+        <p><strong>Gender:</strong> ${gender}</p>
+        <p><strong>Likes:</strong> ${likesList}</p>
+        <button id="closeProfileBtn">Close</button>
+      </div>
+    </div>
+  `;
+
+  document.body.insertAdjacentHTML('beforeend', modalHTML);
+  document.getElementById('closeProfileBtn').onclick = () => {
+    document.getElementById('userProfileModal').remove();
+  };
+}
+
+// ----- LOCAL STORAGE -----
+function saveMessageToLocalStorage(message) {
+  if (!currentRoom) return;
+  const key = `messages_${currentRoom}`;
+  let stored = JSON.parse(localStorage.getItem(key)) || [];
+  stored.push(message);
+  localStorage.setItem(key, JSON.stringify(stored));
+}
+
+function loadMessagesFromLocalStorage() {
+  if (!currentRoom) return;
+  const key = `messages_${currentRoom}`;
+  const stored = JSON.parse(localStorage.getItem(key)) || [];
+  stored.forEach(msg => {
+    const isSent = msg.sender === myProfile.username;
+    if (msg.type === 'message') {
+      displayMessage(msg.content, isSent, msg.id, msg.sender, msg.profile, msg.timestamp);
+    } else if (msg.type === 'image') {
+      displayImage(msg.data, isSent, msg.id, msg.sender, msg.profile, msg.timestamp);
+    }
+  });
+}
+
+// ----- SEND MESSAGE & IMAGE -----
+function sendMessage() {
+  const content = messageInput.value.trim();
+  if (!content || !connectionReady) return;
+
+  const msgId = generateMessageId();
+  const timestamp = new Date().toISOString();
+
+  const message = {
+    type: 'message',
+    room: currentRoom,
+    content,
+    sender: myProfile.username,
+    id: msgId,
+    profile: myProfile,
+    timestamp
+  };
+
+  ws.send(JSON.stringify(message));
+  displayMessage(content, true, msgId, myProfile.username, myProfile, timestamp);
+  saveMessageToLocalStorage(message);
+
+  messageInput.value = '';
+}
+
+function sendImage(base64) {
+  if (!connectionReady) return;
+
+  const msgId = generateMessageId();
+  const timestamp = new Date().toISOString();
+
+  const message = {
+    type: 'image',
+    room: currentRoom,
+    data: base64,
+    sender: myProfile.username,
+    id: msgId,
+    profile: myProfile,
+    timestamp
+  };
+
+  ws.send(JSON.stringify(message));
+  displayImage(base64, true, msgId, myProfile.username, myProfile, timestamp);
+  saveMessageToLocalStorage(message);
+}
+
+// ----- UTILS -----
+function generateMessageId() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    const r = Math.random() * 16 | 0,
+      v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
+
+function showNotification(msg) {
+  notificationDiv.textContent = msg;
+  notificationDiv.style.display = 'block';
+  setTimeout(() => {
+    notificationDiv.style.display = 'none';
+  }, 3000);
+}
+
+function clearLocalStorage() {
+  localStorage.removeItem(`messages_${currentRoom}`);
+  messageArea.innerHTML = '';
+  showNotification('Chat history cleared.');
+}
+
+// ----- IMAGE UPLOAD HANDLER -----
+imageUpload.addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onloadend = () => {
+    const base64 = reader.result.split(',')[1];
+    sendImage(base64);
+  };
+  reader.readAsDataURL(file);
+  e.target.value = null;
+});
+
+// ----- INITIALIZATION -----
+loadOrCreateProfile();
+
+// Expose sendMessage for button
+window.sendMessage = sendMessage;
+window.clearLocalStorage = clearLocalStorage;
+    
+    
+  </script>
 </body>
 </html>
