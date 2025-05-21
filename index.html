@@ -4,10 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Anonymous Chat</title>
-  <link rel="stylesheet" href="styles.css" />
-</head>
+  </head>
 <style>
-  
+  /* --- Styles (as provided by you) --- */
 body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   background-color: #e0e0e0;
@@ -220,10 +219,8 @@ button:hover {
 <body>
   <div id="loading">Loading...</div>
 
-  <!-- Chat messages -->
   <div id="messageArea"></div>
 
-  <!-- Message input -->
   <div class="display">
     <input type="text" id="messageInput" placeholder="Type a message..." />
     <button onclick="sendMessage()">Send</button>
@@ -235,7 +232,6 @@ button:hover {
 
   <div id="notification"></div>
 
-  <!-- Profile Setup Modal -->
   <div id="profileModal" class="modal">
     <div class="modal-content">
       <h2>Enter Your Profile</h2>
@@ -267,7 +263,6 @@ button:hover {
     </div>
   </div>
 
-  <!-- Profile Viewer Modal -->
   <div id="viewerModal" class="modal">
     <div class="modal-content">
       <h2>User Profile</h2>
@@ -279,370 +274,390 @@ button:hover {
   </div>
 
   <script>
-    
-const ws = new WebSocket('wss://websocket-server-6jct.onrender.com'); // Replace with your server URL
-const messageArea = document.getElementById('messageArea');
-const messageInput = document.getElementById('messageInput');
-const imageUpload = document.getElementById('imageUpload');
-const loadingDiv = document.getElementById('loading');
-const notificationDiv = document.getElementById('notification');
+    // --- IMPORTANT: This URL has been updated with your Render server URL ---
+    const API_BASE_URL = 'https://websocket-server-6jct.onrender.com'; 
+    const WS_URL = API_BASE_URL.replace('https://', 'wss://'); // Derive WebSocket URL
 
-let currentRoom = "anonymous";
-let myProfile = null; // Will hold username, likes, gender, isAdult
-let connectionReady = false;
-const messageHistory = new Map();
+    const ws = new WebSocket(WS_URL);
+    const messageArea = document.getElementById('messageArea');
+    const messageInput = document.getElementById('messageInput');
+    const imageUpload = document.getElementById('imageUpload');
+    const loadingDiv = document.getElementById('loading');
+    const notificationDiv = document.getElementById('notification');
 
-loadingDiv.style.display = 'block';
+    let currentRoom = "anonymous";
+    let myProfile = null; // Will hold username, likes, gender, isAdult
+    let connectionReady = false;
+    const messageHistory = new Map(); // Tracks message IDs already displayed to avoid duplicates
 
-// ----- USER PROFILE MODAL -----
-function showProfileModal() {
-  // Create modal HTML
-  const modalHTML = `
-    <div id="profileModal" style="
-      position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6);
-      display:flex; align-items:center; justify-content:center; z-index:10000;">
-      <div style="background:#fff; padding:20px; border-radius:8px; width:320px;">
-        <h2>Set up your profile</h2>
-        <label>Username:<br><input id="profileUsername" type="text" maxlength="20" placeholder="Your name" required></label><br><br>
-        <fieldset>
-          <legend>Things you like:</legend>
-          <label><input type="checkbox" value="love"> Love</label><br>
-          <label><input type="checkbox" value="dogs"> Dogs</label><br>
-          <label><input type="checkbox" value="cats"> Cats</label><br>
-          <label><input type="checkbox" value="music"> Music</label><br>
-          <label><input type="checkbox" value="sex"> Sex</label><br>
-          <label><input type="checkbox" value="relationship"> Relationship</label>
-        </fieldset><br>
-        <label>Gender:<br>
-          <select id="profileGender" required>
-            <option value="" disabled selected>Select gender</option>
-            <option value="Male">Male</option>
-            <option value="Female">Female</option>
-            <option value="Other">Other</option>
-            <option value="Prefer not to say">Prefer not to say</option>
-          </select>
-        </label><br><br>
-        <label><input type="checkbox" id="profileAdult" required> I confirm I am over 18</label><br><br>
-        <button id="profileSaveBtn">Save Profile</button>
-      </div>
-    </div>
-  `;
-  document.body.insertAdjacentHTML('beforeend', modalHTML);
-  const modal = document.getElementById('profileModal');
-  const saveBtn = document.getElementById('profileSaveBtn');
-
-  saveBtn.onclick = () => {
-    const username = document.getElementById('profileUsername').value.trim();
-    const gender = document.getElementById('profileGender').value;
-    const adultCheckbox = document.getElementById('profileAdult').checked;
-    const likesCheckboxes = modal.querySelectorAll('input[type=checkbox]:not(#profileAdult):checked');
-    const likes = Array.from(likesCheckboxes).map(cb => cb.value);
-
-    if (!username) {
-      alert('Please enter a username.');
-      return;
-    }
-    if (!gender) {
-      alert('Please select your gender.');
-      return;
-    }
-    if (!adultCheckbox) {
-      alert('You must confirm you are over 18.');
-      return;
-    }
-
-    myProfile = { username, gender, likes, isAdult: adultCheckbox };
-    localStorage.setItem('myProfile', JSON.stringify(myProfile));
-    modal.remove();
-    initWebSocket();
-  };
-}
-
-// Load profile from localStorage or show modal
-function loadOrCreateProfile() {
-  const savedProfile = localStorage.getItem('myProfile');
-  if (savedProfile) {
-    myProfile = JSON.parse(savedProfile);
-    initWebSocket();
-  } else {
-    showProfileModal();
-  }
-}
-
-// ----- WEBSOCKET AND CHAT HANDLERS -----
-function initWebSocket() {
-  ws.onopen = () => {
-    console.log('Connected to WebSocket server!');
-    connectionReady = true;
-    loadingDiv.style.display = 'none';
-    joinRoom(currentRoom);
-  };
-
-  ws.onmessage = (event) => {
-    try {
-      const message = JSON.parse(event.data);
-      if (message && message.room === currentRoom) {
-        handleIncomingMessage(message);
-      }
-    } catch (err) {
-      console.error('Error parsing message:', err);
-    }
-  };
-
-  ws.onerror = (error) => {
-    console.error('WebSocket error:', error);
     loadingDiv.style.display = 'block';
-  };
 
-  ws.onclose = () => {
-    console.log('Disconnected from WebSocket');
-    connectionReady = false;
-    loadingDiv.style.display = 'block';
-  };
-}
+    // ----- USER PROFILE MODAL -----
+    const profileModal = document.getElementById('profileModal');
+    const usernameInput = document.getElementById('usernameInput');
+    const genderSelect = document.getElementById('genderSelect');
+    const ageConfirm = document.getElementById('ageConfirm');
 
-function joinRoom(roomId) {
-  if (!connectionReady) return;
-  ws.send(JSON.stringify({ type: 'join', room: roomId, user: myProfile.username }));
-  messageArea.innerHTML = "";
-  showNotification(`Joined room: ${roomId}`);
-  loadMessagesFromLocalStorage();
-}
+    // Function to submit profile from the initial modal
+    window.submitProfile = () => { // Make it a global function for onclick
+        const username = usernameInput.value.trim();
+        const gender = genderSelect.value;
+        const adultCheckbox = ageConfirm.checked;
+        const likesCheckboxes = profileModal.querySelectorAll('input[type=checkbox]:not(#ageConfirm):checked');
+        const likes = Array.from(likesCheckboxes).map(cb => cb.value);
 
-function handleIncomingMessage(message) {
-  const { type, sender, content, data, id, profile, timestamp } = message;
-  if (!id) return;
+        if (!username) {
+            alert('Please enter a username.');
+            return;
+        }
+        if (!gender || gender === "prefer_not_say") { // Ensure a selection other than default
+            alert('Please select your gender.');
+            return;
+        }
+        if (!adultCheckbox) {
+            alert('You must confirm you are over 18.');
+            return;
+        }
 
-  // Skip duplicate
-  if (messageHistory.has(id)) return;
-  messageHistory.set(id, true);
+        myProfile = { username, gender, likes, isAdult: adultCheckbox };
+        localStorage.setItem('myProfile', JSON.stringify(myProfile));
+        profileModal.style.display = 'none'; // Hide the modal
+        initWebSocket(); // Initialize WebSocket connection after profile is set
+    };
 
-  const isSentByMe = sender === myProfile.username;
-
-  // Only display messages that were NOT sent by the current user
-  if (!isSentByMe) {
-    if (type === 'message') {
-      displayMessage(content, isSentByMe, id, sender, profile, timestamp);
-      saveMessageToLocalStorage(message);
-    } else if (type === 'image') {
-      displayImage(data, isSentByMe, id, sender, profile, timestamp);
-      saveMessageToLocalStorage(message);
+    function showProfileModal() {
+        profileModal.style.display = 'flex'; // Use flex to center
     }
-  }
-}
 
-
-// ----- DISPLAY FUNCTIONS -----
-function highlightKeywords(text) {
-  const keywords = {
-    love: "green",
-    money: "green",
-    home: "green",
-    monpress: "green",
-    "mide sensational": "green",
-    eksu: "green",
-    fuck: "red",
-    danger: "red",
-    warning: "red",
-    sad: "red",
-    sex: "red",
-    kill: "yellow",
-  };
-
-  let result = text;
-
-  for (const [keyword, color] of Object.entries(keywords)) {
-    const regex = new RegExp(`\\b${keyword}\\b`, 'gi');
-    result = result.replace(regex, match => `<span style="color:${color};font-weight:bold;">${match}</span>`);
-  }
-  return result;
-}
-
-function displayMessage(text, isSent, id, sender, profile = {}, timestamp = null) {
-  const msgDiv = document.createElement('div');
-  msgDiv.classList.add('message', isSent ? 'sent' : 'received');
-  msgDiv.dataset.sender = sender;
-  msgDiv.dataset.profile = JSON.stringify(profile);
-  msgDiv.dataset.timestamp = timestamp || new Date().toISOString();
-
-  const highlightedText = highlightKeywords(text);
-  msgDiv.innerHTML = `<strong>${sender}</strong>: ${highlightedText}`;
-
-  const timeSpan = document.createElement('span');
-  timeSpan.classList.add('timestamp');
-  timeSpan.textContent = new Date(msgDiv.dataset.timestamp).toLocaleTimeString();
-  msgDiv.appendChild(timeSpan);
-
-  messageArea.appendChild(msgDiv);
-  messageArea.scrollTop = messageArea.scrollHeight;
-
-  // Add click listener to show profile modal
-  msgDiv.onclick = () => showUserProfileModal(sender, profile);
-}
-
-
-function displayImage(base64, isSent, id, sender, profile = {}, timestamp = null) {
-  const msgDiv = document.createElement('div');
-  msgDiv.classList.add('message', isSent ? 'sent' : 'received', 'image-message');
-  msgDiv.dataset.sender = sender;
-  msgDiv.dataset.profile = JSON.stringify(profile);
-  msgDiv.dataset.timestamp = timestamp || new Date().toISOString();
-
-  msgDiv.innerHTML = `<strong>${sender}</strong> sent an image:<br>`;
-  const img = document.createElement('img');
-  img.src = `data:image/png;base64,${base64}`;
-  img.style.maxWidth = '100%';
-  img.style.borderRadius = '8px';
-  msgDiv.appendChild(img);
-
-  const timeSpan = document.createElement('span');
-  timeSpan.classList.add('timestamp');
-  timeSpan.textContent = new Date(msgDiv.dataset.timestamp).toLocaleTimeString();
-  msgDiv.appendChild(timeSpan);
-
-  messageArea.appendChild(msgDiv);
-  messageArea.scrollTop = messageArea.scrollHeight;
-
-  msgDiv.onclick = () => showUserProfileModal(sender, profile);
-}
-
-// ----- PROFILE MODAL ON MESSAGE CLICK -----
-function showUserProfileModal(username, profile = {}) {
-  const { gender = 'Unknown', likes = [] } = profile;
-  const likesList = likes.length ? likes.join(', ') : 'No likes specified';
-
-  const modalHTML = `
-    <div id="userProfileModal" style="
-      position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6);
-      display:flex; align-items:center; justify-content:center; z-index:10000;">
-      <div style="background:#fff; padding:20px; border-radius:8px; width:280px; text-align:center;">
-        <h3>${username}'s Profile</h3>
-        <p><strong>Gender:</strong> ${gender}</p>
-        <p><strong>Likes:</strong> ${likesList}</p>
-        <button id="closeProfileBtn">Close</button>
-      </div>
-    </div>
-  `;
-
-  document.body.insertAdjacentHTML('beforeend', modalHTML);
-  document.getElementById('closeProfileBtn').onclick = () => {
-    document.getElementById('userProfileModal').remove();
-  };
-}
-
-// ----- LOCAL STORAGE -----
-function saveMessageToLocalStorage(message) {
-  if (!currentRoom) return;
-  const key = `messages_${currentRoom}`;
-  let stored = JSON.parse(localStorage.getItem(key)) || [];
-  stored.push(message);
-  localStorage.setItem(key, JSON.stringify(stored));
-}
-
-function loadMessagesFromLocalStorage() {
-  if (!currentRoom) return;
-  const key = `messages_${currentRoom}`;
-  const stored = JSON.parse(localStorage.getItem(key)) || [];
-  stored.forEach(msg => {
-    const isSent = msg.sender === myProfile.username;
-    if (msg.type === 'message') {
-      displayMessage(msg.content, isSent, msg.id, msg.sender, msg.profile, msg.timestamp);
-    } else if (msg.type === 'image') {
-      displayImage(msg.data, isSent, msg.id, msg.sender, msg.profile, msg.timestamp);
+    // Load profile from localStorage or show modal
+    function loadOrCreateProfile() {
+        const savedProfile = localStorage.getItem('myProfile');
+        if (savedProfile) {
+            myProfile = JSON.parse(savedProfile);
+            initWebSocket();
+        } else {
+            showProfileModal();
+        }
     }
-  });
-}
 
-// ----- SEND MESSAGE & IMAGE -----
-function sendMessage() {
-  const content = messageInput.value.trim();
-  if (!content || !connectionReady) return;
+    // ----- WEBSOCKET AND CHAT HANDLERS -----
+    function initWebSocket() {
+        ws.onopen = () => {
+            console.log('Connected to WebSocket server!');
+            connectionReady = true;
+            loadingDiv.style.display = 'none';
+            joinRoom(currentRoom);
+        };
 
-  const msgId = generateMessageId();
-  const timestamp = new Date().toISOString();
+        ws.onmessage = (event) => {
+            try {
+                const message = JSON.parse(event.data);
+                if (message.room === currentRoom) {
+                    if (message.type === 'history') {
+                        // Clear current messages and load history from server
+                        messageArea.innerHTML = "";
+                        messageHistory.clear(); // Clear tracking map for new history
+                        message.messages.forEach(msg => {
+                            // History can contain messages sent by 'me' from a previous session
+                            const isSentByMe = msg.sender === myProfile.username; 
+                            if (msg.type === 'message') {
+                                displayMessage(msg.content, isSentByMe, msg.id, msg.sender, msg.profile, msg.timestamp);
+                            } else if (msg.type === 'image') {
+                                // For images from history, server sends imageUrl
+                                displayImage(msg.imageUrl, isSentByMe, msg.id, msg.sender, msg.profile, msg.timestamp);
+                            }
+                            messageHistory.set(msg.id, true); // Mark as displayed
+                            // We don't save history to localStorage here to avoid re-saving the entire history from the server repeatedly.
+                            // Local storage will now only accumulate new messages sent/received *after* the initial history load.
+                        });
+                        messageArea.scrollTop = messageArea.scrollHeight; // Scroll to bottom
+                        showNotification('Chat history loaded.');
+                        console.log(`Loaded ${message.messages.length} messages from server history.`);
 
-  const message = {
-    type: 'message',
-    room: currentRoom,
-    content,
-    sender: myProfile.username,
-    id: msgId,
-    profile: myProfile,
-    timestamp
-  };
+                    } else if (message.type === 'message' || message.type === 'image') {
+                        // Handle real-time messages
+                        handleIncomingRealtimeMessage(message);
+                    }
+                    // You could add handlers for 'population', 'userList' etc. here if needed
+                }
+            } catch (err) {
+                console.error('Error parsing or handling WebSocket message:', err);
+            }
+        };
 
-  ws.send(JSON.stringify(message));
-  displayMessage(content, true, msgId, myProfile.username, myProfile, timestamp);
-  saveMessageToLocalStorage(message);
+        ws.onerror = (error) => {
+            console.error('WebSocket error:', error);
+            loadingDiv.textContent = 'Connection Error. Retrying...';
+            loadingDiv.style.display = 'block';
+            connectionReady = false;
+        };
 
-  messageInput.value = '';
-}
+        ws.onclose = () => {
+            console.log('Disconnected from WebSocket. Attempting to reconnect in 5 seconds...');
+            connectionReady = false;
+            loadingDiv.textContent = 'Disconnected. Reconnecting...';
+            loadingDiv.style.display = 'block';
+            setTimeout(initWebSocket, 5000); // Attempt to reconnect after 5 seconds
+        };
+    }
 
-function sendImage(base64) {
-  if (!connectionReady) return;
+    function joinRoom(roomId) {
+        if (!connectionReady) return;
+        ws.send(JSON.stringify({ type: 'join', room: roomId, user: myProfile.username, profile: myProfile }));
+        // Do NOT clear messageArea or load from localStorage here.
+        // The server will send the history, which will clear/populate the messageArea.
+        showNotification(`Joining room: ${roomId}`);
+    }
 
-  const msgId = generateMessageId();
-  const timestamp = new Date().toISOString();
+    // New function to handle real-time incoming messages
+    function handleIncomingRealtimeMessage(message) {
+        const { type, sender, content, imageUrl, id, profile, timestamp } = message; 
+        if (!id) return;
 
-  const message = {
-    type: 'image',
-    room: currentRoom,
-    data: base64,
-    sender: myProfile.username,
-    id: msgId,
-    profile: myProfile,
-    timestamp
-  };
+        // Skip duplicate if already displayed (e.g., self-sent message that was displayed instantly)
+        if (messageHistory.has(id)) return;
+        messageHistory.set(id, true); // Mark as processed
 
-  ws.send(JSON.stringify(message));
-  displayImage(base64, true, msgId, myProfile.username, myProfile, timestamp);
-  saveMessageToLocalStorage(message);
-}
+        const isSentByMe = sender === myProfile.username;
 
-// ----- UTILS -----
-function generateMessageId() {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
-    const r = Math.random() * 16 | 0,
-      v = c === 'x' ? r : (r & 0x3 | 0x8);
-    return v.toString(16);
-  });
-}
+        // Display messages from other users in real-time.
+        // Messages sent by 'myself' are displayed instantly by sendMessage/sendImage functions,
+        // so we skip the echo from the server to prevent duplicates.
+        if (!isSentByMe) { 
+            if (type === 'message') {
+                displayMessage(content, isSentByMe, id, sender, profile, timestamp);
+            } else if (type === 'image') {
+                // For incoming images from server, use imageUrl
+                displayImage(imageUrl, isSentByMe, id, sender, profile, timestamp);
+            }
+            saveMessageToLocalStorage(message); // Save newly received messages to local storage
+        }
+    }
 
-function showNotification(msg) {
-  notificationDiv.textContent = msg;
-  notificationDiv.style.display = 'block';
-  setTimeout(() => {
-    notificationDiv.style.display = 'none';
-  }, 3000);
-}
 
-function clearLocalStorage() {
-  localStorage.removeItem(`messages_${currentRoom}`);
-  messageArea.innerHTML = '';
-  showNotification('Chat history cleared.');
-}
+    // ----- DISPLAY FUNCTIONS -----
+    function highlightKeywords(text) {
+        const keywords = {
+            love: "green",
+            money: "green",
+            home: "green",
+            monpress: "green",
+            "mide sensational": "green",
+            eksu: "green",
+            fuck: "red",
+            danger: "red",
+            warning: "red",
+            sad: "red",
+            sex: "red",
+            kill: "yellow",
+        };
 
-// ----- IMAGE UPLOAD HANDLER -----
-imageUpload.addEventListener('change', (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onloadend = () => {
-    const base64 = reader.result.split(',')[1];
-    sendImage(base64);
-  };
-  reader.readAsDataURL(file);
-  e.target.value = null;
-});
+        let result = text;
+        for (const [keyword, color] of Object.entries(keywords)) {
+            const regex = new RegExp(`\\b${keyword}\\b`, 'gi');
+            result = result.replace(regex, match => `<span class="highlight-${color}">${match}</span>`);
+        }
+        return result;
+    }
 
-// ----- INITIALIZATION -----
-loadOrCreateProfile();
+    function displayMessage(text, isSent, id, sender, profile = {}, timestamp = null) {
+        const msgDiv = document.createElement('div');
+        msgDiv.classList.add('message', isSent ? 'sent' : 'received');
+        msgDiv.dataset.sender = sender;
+        msgDiv.dataset.profile = JSON.stringify(profile);
+        msgDiv.dataset.timestamp = timestamp || new Date().toISOString();
 
-// Expose sendMessage for button
-window.sendMessage = sendMessage;
-window.clearLocalStorage = clearLocalStorage;
-    
-    
+        const highlightedText = highlightKeywords(text);
+        msgDiv.innerHTML = `<strong>${sender}</strong>: ${highlightedText}`;
+
+        const timeSpan = document.createElement('span');
+        timeSpan.classList.add('timestamp');
+        timeSpan.textContent = new Date(msgDiv.dataset.timestamp).toLocaleTimeString();
+        msgDiv.appendChild(timeSpan);
+
+        messageArea.appendChild(msgDiv);
+        messageArea.scrollTop = messageArea.scrollHeight;
+
+        // Add click listener to show profile modal
+        msgDiv.onclick = () => showUserProfileModal(sender, profile);
+    }
+
+    // Modified displayImage to handle both base64 (for sent) and imageUrl (for received)
+    function displayImage(imageSource, isSent, id, sender, profile = {}, timestamp = null) {
+        const msgDiv = document.createElement('div');
+        msgDiv.classList.add('message', isSent ? 'sent' : 'received', 'image-message');
+        msgDiv.dataset.sender = sender;
+        msgDiv.dataset.profile = JSON.stringify(profile);
+        msgDiv.dataset.timestamp = timestamp || new Date().toISOString();
+
+        msgDiv.innerHTML = `<strong>${sender}</strong> sent an image:<br>`;
+        const img = document.createElement('img');
+
+        if (isSent) {
+            // When *sending* an image, `imageSource` is base64 (for immediate local display)
+            img.src = `data:image/png;base64,${imageSource}`;
+        } else {
+            // When *receiving* an image from the server (either real-time or history),
+            // `imageSource` is the URL relative to the server.
+            // We prepend API_BASE_URL to form the full URL.
+            img.src = `${API_BASE_URL}${imageSource}`; 
+        }
+        
+        img.style.maxWidth = '100%';
+        img.style.borderRadius = '8px';
+        msgDiv.appendChild(img);
+
+        const timeSpan = document.createElement('span');
+        timeSpan.classList.add('timestamp');
+        timeSpan.textContent = new Date(msgDiv.dataset.timestamp).toLocaleTimeString();
+        msgDiv.appendChild(timeSpan);
+
+        messageArea.appendChild(msgDiv);
+        messageArea.scrollTop = messageArea.scrollHeight;
+
+        msgDiv.onclick = () => showUserProfileModal(sender, profile);
+    }
+
+    // ----- PROFILE MODAL ON MESSAGE CLICK -----
+    const viewerModal = document.getElementById('viewerModal');
+    const viewerUsernameSpan = document.getElementById('viewerUsername');
+    const viewerGenderSpan = document.getElementById('viewerGender');
+    const viewerLikesSpan = document.getElementById('viewerLikes');
+
+    function showUserProfileModal(username, profile = {}) {
+        const { gender = 'Unknown', likes = [] } = profile;
+        const likesList = likes.length ? likes.join(', ') : 'No likes specified';
+
+        viewerUsernameSpan.textContent = username;
+        viewerGenderSpan.textContent = gender;
+        viewerLikesSpan.textContent = likesList;
+        viewerModal.style.display = 'flex'; // Show modal
+    }
+
+    window.closeViewer = () => { // Make global for onclick
+        viewerModal.style.display = 'none'; // Hide modal
+    };
+
+
+    // ----- LOCAL STORAGE (Only for newly received messages now) -----
+    // This will now only save messages received *after* the initial history load
+    // from the server, or messages sent by yourself.
+    function saveMessageToLocalStorage(message) {
+        if (!currentRoom) return;
+        const key = `messages_${currentRoom}`;
+        let stored = JSON.parse(localStorage.getItem(key)) || [];
+        // Prevent duplicates from history loading from being saved twice
+        if (!stored.some(msg => msg.id === message.id)) {
+            stored.push(message);
+            localStorage.setItem(key, JSON.stringify(stored));
+        }
+    }
+
+    // This function is now largely obsolete as server provides history on connect.
+    // It's kept for potential future use or if you want to fall back to purely local.
+    function loadMessagesFromLocalStorage() {
+        // This function is not explicitly called after `joinRoom` in the new `initWebSocket`.
+        // The `ws.onmessage` `type === 'history'` block handles the primary display of past messages.
+    }
+
+
+    // ----- SEND MESSAGE & IMAGE -----
+    function sendMessage() {
+        const content = messageInput.value.trim();
+        if (!content || !connectionReady) return;
+
+        const msgId = generateMessageId();
+        const timestamp = new Date().toISOString();
+
+        const message = {
+            type: 'message',
+            room: currentRoom,
+            content,
+            sender: myProfile.username,
+            id: msgId,
+            profile: myProfile, // Ensure 'profile' field matches server's 'profile' expectation
+            timestamp
+        };
+
+        ws.send(JSON.stringify(message));
+        displayMessage(content, true, msgId, myProfile.username, myProfile, timestamp); // Display immediately
+        saveMessageToLocalStorage(message); // Save sent message to local storage
+
+        messageInput.value = '';
+    }
+
+    function sendImage(base64, filename = 'image.png') { // Added filename parameter
+        if (!connectionReady) return;
+
+        const msgId = generateMessageId();
+        const timestamp = new Date().toISOString();
+
+        const message = {
+            type: 'image',
+            room: currentRoom,
+            data: base64, // Send base64 to server
+            filename: filename, // Send filename to server
+            sender: myProfile.username,
+            id: msgId,
+            profile: myProfile,
+            timestamp
+        };
+
+        ws.send(JSON.stringify(message));
+        displayImage(base64, true, msgId, myProfile.username, myProfile, timestamp); // Display immediately (base64)
+        // Image messages from server will have imageUrl, save this version for local storage for now.
+        // Consider if you want to store the URL in local storage instead of base64 if server provides it.
+        saveMessageToLocalStorage(message); 
+    }
+
+    // ----- UTILS -----
+    function generateMessageId() {
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+            const r = Math.random() * 16 | 0,
+                v = c === 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+        });
+    }
+
+    function showNotification(msg) {
+        notificationDiv.textContent = msg;
+        notificationDiv.style.display = 'block';
+        setTimeout(() => {
+            notificationDiv.style.display = 'none';
+        }, 3000);
+    }
+
+    // Clear client-side stored history
+    window.clearLocalStorage = () => { // Make global for onclick
+        localStorage.removeItem(`messages_${currentRoom}`);
+        messageArea.innerHTML = '';
+        messageHistory.clear(); // Clear the map too
+        showNotification('Chat history cleared from browser.');
+    };
+
+    // ----- IMAGE UPLOAD HANDLER -----
+    imageUpload.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        // Add a simple check for file type
+        if (!file.type.startsWith('image/')) {
+            alert('Please select an image file.');
+            e.target.value = null;
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            const base64 = reader.result.split(',')[1];
+            sendImage(base64, file.name); // Pass filename to sendImage
+        };
+        reader.readAsDataURL(file);
+        e.target.value = null; // Clear the input so same file can be selected again
+    });
+
+    // ----- INITIALIZATION -----
+    loadOrCreateProfile(); // This will eventually call initWebSocket
   </script>
 </body>
 </html>
