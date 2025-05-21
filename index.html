@@ -4,9 +4,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Anonymous Chat</title>
-  </head>
+  <link rel="stylesheet" href="styles.css" />
+</head>
 <style>
-  /* --- Styles (as provided by you) --- */
+  
 body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   background-color: #e0e0e0;
@@ -215,9 +216,95 @@ button:hover {
   border-radius: 3px;
   padding: 0 2px;
 }
+
+/* New style for online count */
+#onlineCountDisplay {
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  background-color: #4CAF50; /* Green background */
+  color: white;
+  padding: 8px 12px;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 0.9em;
+  font-weight: bold;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  z-index: 999;
+}
+
+#onlineCountDisplay:hover {
+  background-color: #45a049;
+}
+
+/* Online Users List Modal */
+#onlineUsersModal .modal-content ul {
+    list-style: none;
+    padding: 0;
+}
+
+#onlineUsersModal .modal-content li {
+    padding: 8px 0;
+    border-bottom: 1px solid #eee;
+}
+
+#onlineUsersModal .modal-content li:last-child {
+    border-bottom: none;
+}
+
+/* Profile Setup Modal specific styles */
+#profileSetupModal .modal-content {
+    text-align: left;
+}
+
+#profileSetupModal input[type="text"],
+#profileSetupModal select {
+    width: calc(100% - 22px); /* Account for padding */
+    padding: 10px;
+    margin-bottom: 15px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+}
+
+#profileSetupModal fieldset {
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    padding: 10px;
+    margin-bottom: 15px;
+}
+
+#profileSetupModal legend {
+    font-weight: bold;
+    padding: 0 5px;
+}
+
+#profileSetupModal label {
+    display: block;
+    margin-bottom: 8px;
+}
+
+#profileSetupModal button {
+    width: 100%;
+    padding: 12px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1.1em;
+}
+
+#profileSetupModal button:hover {
+    background-color: #0056b3;
+}
+
 </style>
 <body>
   <div id="loading">Loading...</div>
+
+  <div id="onlineCountDisplay">
+    Online: <span id="onlineCount">0</span>
+  </div>
 
   <div id="messageArea"></div>
 
@@ -232,36 +319,37 @@ button:hover {
 
   <div id="notification"></div>
 
-  <div id="profileModal" class="modal">
+  <div id="profileSetupModal" class="modal">
     <div class="modal-content">
-      <h2>Enter Your Profile</h2>
-      <input type="text" id="usernameInput" placeholder="Enter your username" />
+      <h2>Set up your profile</h2>
+      <label for="profileUsername">Username:</label>
+      <input id="profileUsername" type="text" maxlength="20" placeholder="Your name" required>
 
-      <div>
-        <p>What do you like?</p>
-        <label><input type="checkbox" value="love" /> Love</label>
-        <label><input type="checkbox" value="dogs" /> Dogs</label>
-        <label><input type="checkbox" value="cats" /> Cats</label>
-        <label><input type="checkbox" value="music" /> Music</label>
-        <label><input type="checkbox" value="sex" /> Sex</label>
-        <label><input type="checkbox" value="relationship" /> Relationship</label>
-      </div>
+      <fieldset>
+        <legend>Things you like:</legend>
+        <label><input type="checkbox" name="likes" value="love"> Love</label>
+        <label><input type="checkbox" name="likes" value="dogs"> Dogs</label>
+        <label><input type="checkbox" name="likes" value="cats"> Cats</label>
+        <label><input type="checkbox" name="likes" value="music"> Music</label>
+        <label><input type="checkbox" name="likes" value="sex"> Sex</label>
+        <label><input type="checkbox" name="likes" value="relationship"> Relationship</label>
+      </fieldset>
 
-      <div>
-        <p>Your Gender:</p>
-        <select id="genderSelect">
-          <option value="prefer_not_say">Prefer not to say</option>
-          <option value="male">Male</option>
-          <option value="female">Female</option>
-          <option value="other">Other</option>
-        </select>
-      </div>
+      <label for="profileGender">Gender:</label>
+      <select id="profileGender" required>
+        <option value="" disabled selected>Select gender</option>
+        <option value="Male">Male</option>
+        <option value="Female">Female</option>
+        <option value="Other">Other</option>
+        <option value="Prefer not to say">Prefer not to say</option>
+      </select>
 
-      <label><input type="checkbox" id="ageConfirm" /> I confirm I'm above 18</label>
-      <br />
-      <button onclick="submitProfile()">Continue</button>
+      <label><input type="checkbox" id="profileAdult" required> I confirm I am over 18</label>
+      
+      <button onclick="saveProfile()">Save Profile</button>
     </div>
   </div>
+
 
   <div id="viewerModal" class="modal">
     <div class="modal-content">
@@ -273,391 +361,497 @@ button:hover {
     </div>
   </div>
 
+  <div id="onlineUsersModal" class="modal">
+    <div class="modal-content">
+      <h2>Online Users (<span id="onlineUsersCountInModal">0</span>)</h2>
+      <ul id="onlineUsersList">
+        </ul>
+      <button onclick="document.getElementById('onlineUsersModal').style.display='none'">Close</button>
+    </div>
+  </div>
+
   <script>
-    // --- IMPORTANT: This URL has been updated with your Render server URL ---
-    const API_BASE_URL = 'https://websocket-server-6jct.onrender.com'; 
-    const WS_URL = API_BASE_URL.replace('https://', 'wss://'); // Derive WebSocket URL
+    
+const ws = new WebSocket('wss://websocket-server-6jct.onrender.com'); // IMPORTANT: Replace with your actual server URL
+const messageArea = document.getElementById('messageArea');
+const messageInput = document.getElementById('messageInput');
+const imageUpload = document.getElementById('imageUpload');
+const loadingDiv = document.getElementById('loading');
+const notificationDiv = document.getElementById('notification');
+const onlineCountDisplay = document.getElementById('onlineCountDisplay'); 
+const onlineCountSpan = document.getElementById('onlineCount'); 
+const onlineUsersModal = document.getElementById('onlineUsersModal'); 
+const onlineUsersList = document.getElementById('onlineUsersList'); 
+const onlineUsersCountInModal = document.getElementById('onlineUsersCountInModal'); 
 
-    const ws = new WebSocket(WS_URL);
-    const messageArea = document.getElementById('messageArea');
-    const messageInput = document.getElementById('messageInput');
-    const imageUpload = document.getElementById('imageUpload');
-    const loadingDiv = document.getElementById('loading');
-    const notificationDiv = document.getElementById('notification');
+// Profile setup modal elements
+const profileSetupModal = document.getElementById('profileSetupModal');
+const profileUsernameInput = document.getElementById('profileUsername');
+const profileGenderSelect = document.getElementById('profileGender');
+const profileAdultCheckbox = document.getElementById('profileAdult');
 
-    let currentRoom = "anonymous";
-    let myProfile = null; // Will hold username, likes, gender, isAdult
-    let connectionReady = false;
-    const messageHistory = new Map(); // Tracks message IDs already displayed to avoid duplicates
 
+let currentRoom = "anonymous";
+let myProfile = null; // Will hold username, likes, gender, isAdult
+let connectionReady = false;
+const messageHistory = new Map(); // Tracks displayed message IDs to prevent duplicates
+const messageQueue = new Map(); // Stores messages to send when connection is re-established
+
+loadingDiv.style.display = 'block';
+
+// Add event listener for the online count display
+onlineCountDisplay.addEventListener('click', requestOnlineUserList);
+
+// ----- USER PROFILE MODAL (Initial Setup) -----
+function showProfileSetupModal() {
+  profileSetupModal.style.display = 'flex'; // Show the modal
+  // Clear any previous inputs for a clean start
+  profileUsernameInput.value = '';
+  profileGenderSelect.value = ''; // Reset select to default option
+  profileAdultCheckbox.checked = false;
+  const likesCheckboxes = profileSetupModal.querySelectorAll('input[name="likes"]');
+  likesCheckboxes.forEach(cb => cb.checked = false);
+}
+
+function saveProfile() {
+  const username = profileUsernameInput.value.trim();
+  const gender = profileGenderSelect.value;
+  const adultCheckbox = profileAdultCheckbox.checked;
+  const likesCheckboxes = profileSetupModal.querySelectorAll('input[name="likes"]:checked');
+  const likes = Array.from(likesCheckboxes).map(cb => cb.value);
+
+  if (!username) {
+    alert('Please enter a username.');
+    return;
+  }
+  if (!gender) {
+    alert('Please select your gender.');
+    return;
+  }
+  if (!adultCheckbox) {
+    alert('You must confirm you are over 18.');
+    return;
+  }
+
+  myProfile = { username, gender, likes, isAdult: adultCheckbox };
+  localStorage.setItem('myProfile', JSON.stringify(myProfile));
+  profileSetupModal.style.display = 'none'; // Hide modal
+  initWebSocket(); // Initialize WebSocket after profile is set
+}
+
+// Load profile from localStorage or show modal
+function loadOrCreateProfile() {
+  const savedProfile = localStorage.getItem('myProfile');
+  if (savedProfile) {
+    myProfile = JSON.parse(savedProfile);
+    initWebSocket();
+  } else {
+    showProfileSetupModal();
+  }
+}
+
+// ----- WEBSOCKET AND CHAT HANDLERS -----
+function initWebSocket() {
+  ws.onopen = () => {
+    console.log('Connected to WebSocket server!');
+    connectionReady = true;
+    loadingDiv.style.display = 'none';
+    joinRoom(currentRoom);
+    deliverQueuedMessages();
+    requestOnlineUserList(); // Request initial online count/list
+  };
+
+  ws.onmessage = (event) => {
+    try {
+      const message = JSON.parse(event.data);
+      
+      if (message.type === 'overallOnlineCount') {
+          updateOnlineCount(message.count);
+      } else if (message.type === 'overallUserList') {
+          displayOnlineUserList(message.users);
+      } else if (message.room === currentRoom) { // Process messages for the current room
+        handleIncomingMessage(message);
+      }
+    } catch (err) {
+      console.error('Error parsing message:', err);
+    }
+  };
+
+  ws.onerror = (error) => {
+    console.error('WebSocket error:', error);
     loadingDiv.style.display = 'block';
+    showNotification('WebSocket connection error. Trying to reconnect...');
+  };
 
-    // ----- USER PROFILE MODAL -----
-    const profileModal = document.getElementById('profileModal');
-    const usernameInput = document.getElementById('usernameInput');
-    const genderSelect = document.getElementById('genderSelect');
-    const ageConfirm = document.getElementById('ageConfirm');
+  ws.onclose = () => {
+    console.log('Disconnected from WebSocket');
+    connectionReady = false;
+    loadingDiv.style.display = 'block';
+    updateOnlineCount(0); // Set count to 0 on disconnect
+    showNotification('Disconnected. Attempting to reconnect in 3 seconds...');
+    setTimeout(reconnectWebSocket, 3000); // Attempt to reconnect after a delay
+  };
+}
 
-    // Function to submit profile from the initial modal
-    window.submitProfile = () => { // Make it a global function for onclick
-        const username = usernameInput.value.trim();
-        const gender = genderSelect.value;
-        const adultCheckbox = ageConfirm.checked;
-        const likesCheckboxes = profileModal.querySelectorAll('input[type=checkbox]:not(#ageConfirm):checked');
-        const likes = Array.from(likesCheckboxes).map(cb => cb.value);
-
-        if (!username) {
-            alert('Please enter a username.');
-            return;
-        }
-        if (!gender || gender === "prefer_not_say") { // Ensure a selection other than default
-            alert('Please select your gender.');
-            return;
-        }
-        if (!adultCheckbox) {
-            alert('You must confirm you are over 18.');
-            return;
-        }
-
-        myProfile = { username, gender, likes, isAdult: adultCheckbox };
-        localStorage.setItem('myProfile', JSON.stringify(myProfile));
-        profileModal.style.display = 'none'; // Hide the modal
-        initWebSocket(); // Initialize WebSocket connection after profile is set
-    };
-
-    function showProfileModal() {
-        profileModal.style.display = 'flex'; // Use flex to center
+function reconnectWebSocket() {
+    if (!connectionReady) { // Only try to reconnect if not already connected
+        console.log('Attempting to reconnect...');
+        const newWs = new WebSocket('wss://websocket-server-6jct.onrender.com'); // Replace with your server URL
+        // Re-assign event handlers to the new WebSocket instance
+        newWs.onopen = ws.onopen;
+        newWs.onmessage = ws.onmessage;
+        newWs.onerror = ws.onerror;
+        newWs.onclose = ws.onclose;
+        ws = newWs; // Update the global ws variable
     }
+}
 
-    // Load profile from localStorage or show modal
-    function loadOrCreateProfile() {
-        const savedProfile = localStorage.getItem('myProfile');
-        if (savedProfile) {
-            myProfile = JSON.parse(savedProfile);
-            initWebSocket();
-        } else {
-            showProfileModal();
-        }
+
+function joinRoom(roomId) {
+  if (!connectionReady) return;
+  // Ensure profile is sent with the join message
+  ws.send(JSON.stringify({ type: 'join', room: roomId, user: myProfile.username, profile: myProfile })); 
+  messageArea.innerHTML = "";
+  showNotification(`Joined room: ${roomId}`);
+  loadMessagesFromLocalStorage();
+}
+
+function handleIncomingMessage(message) {
+  const { type, sender, content, data, id, senderProfile, timestamp } = message; 
+  if (!id) return;
+
+  // IMPORTANT FIX: Always check messageHistory first to prevent duplicates
+  if (messageHistory.has(id)) {
+      console.log(`Duplicate message received (ID: ${id}). Skipping display.`);
+      return; 
+  }
+  // If it's a new message, mark it as processed
+  messageHistory.set(id, true); 
+
+  const isSentByMe = sender === myProfile.username;
+
+  // Display the message ONLY if it's NOT sent by the current user.
+  // Our own sent messages are displayed immediately in sendMessage/sendImage.
+  if (!isSentByMe) { 
+    if (type === 'message') {
+      displayMessage(content, isSentByMe, id, sender, senderProfile, timestamp); 
+      saveMessageToLocalStorage(message); // Only save received messages
+    } else if (type === 'image') {
+      displayImage(data, isSentByMe, id, sender, senderProfile, timestamp); 
+      saveMessageToLocalStorage(message); // Only save received images
     }
+  }
+}
 
-    // ----- WEBSOCKET AND CHAT HANDLERS -----
-    function initWebSocket() {
-        ws.onopen = () => {
-            console.log('Connected to WebSocket server!');
-            connectionReady = true;
-            loadingDiv.style.display = 'none';
-            joinRoom(currentRoom);
-        };
 
-        ws.onmessage = (event) => {
-            try {
-                const message = JSON.parse(event.data);
-                if (message.room === currentRoom) {
-                    if (message.type === 'history') {
-                        // Clear current messages and load history from server
-                        messageArea.innerHTML = "";
-                        messageHistory.clear(); // Clear tracking map for new history
-                        message.messages.forEach(msg => {
-                            // History can contain messages sent by 'me' from a previous session
-                            const isSentByMe = msg.sender === myProfile.username; 
-                            if (msg.type === 'message') {
-                                displayMessage(msg.content, isSentByMe, msg.id, msg.sender, msg.profile, msg.timestamp);
-                            } else if (msg.type === 'image') {
-                                // For images from history, server sends imageUrl
-                                displayImage(msg.imageUrl, isSentByMe, msg.id, msg.sender, msg.profile, msg.timestamp);
-                            }
-                            messageHistory.set(msg.id, true); // Mark as displayed
-                            // We don't save history to localStorage here to avoid re-saving the entire history from the server repeatedly.
-                            // Local storage will now only accumulate new messages sent/received *after* the initial history load.
-                        });
-                        messageArea.scrollTop = messageArea.scrollHeight; // Scroll to bottom
-                        showNotification('Chat history loaded.');
-                        console.log(`Loaded ${message.messages.length} messages from server history.`);
+// ----- DISPLAY FUNCTIONS -----
+function highlightKeywords(text) {
+  const keywords = {
+    love: "green",
+    money: "green",
+    home: "green",
+    monpress: "green",
+    "mide sensational": "green",
+    eksu: "green",
+    fuck: "red",
+    danger: "red",
+    warning: "red",
+    sad: "red",
+    sex: "red",
+    kill: "yellow",
+  };
 
-                    } else if (message.type === 'message' || message.type === 'image') {
-                        // Handle real-time messages
-                        handleIncomingRealtimeMessage(message);
-                    }
-                    // You could add handlers for 'population', 'userList' etc. here if needed
-                }
-            } catch (err) {
-                console.error('Error parsing or handling WebSocket message:', err);
-            }
-        };
+  let result = text;
 
-        ws.onerror = (error) => {
-            console.error('WebSocket error:', error);
-            loadingDiv.textContent = 'Connection Error. Retrying...';
-            loadingDiv.style.display = 'block';
-            connectionReady = false;
-        };
+  for (const [keyword, color] of Object.entries(keywords)) {
+    const regex = new RegExp(`\\b${keyword}\\b`, 'gi');
+    result = result.replace(regex, match => `<span class="highlight-${color}">${match}</span>`); // Use class
+  }
+  return result;
+}
 
-        ws.onclose = () => {
-            console.log('Disconnected from WebSocket. Attempting to reconnect in 5 seconds...');
-            connectionReady = false;
-            loadingDiv.textContent = 'Disconnected. Reconnecting...';
-            loadingDiv.style.display = 'block';
-            setTimeout(initWebSocket, 5000); // Attempt to reconnect after 5 seconds
-        };
+function displayMessage(text, isSent, id, sender, profile = {}, timestamp = null) {
+  const msgDiv = document.createElement('div');
+  msgDiv.classList.add('message', isSent ? 'sent' : 'received');
+  msgDiv.dataset.sender = sender;
+  msgDiv.dataset.profile = JSON.stringify(profile);
+  msgDiv.dataset.timestamp = timestamp || new Date().toISOString();
+
+  const highlightedText = highlightKeywords(text);
+  msgDiv.innerHTML = `<strong>${sender}</strong>: ${highlightedText}`;
+
+  const timeSpan = document.createElement('span');
+  timeSpan.classList.add('timestamp');
+  timeSpan.textContent = new Date(msgDiv.dataset.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); // Format time
+  msgDiv.appendChild(timeSpan);
+
+  messageArea.appendChild(msgDiv);
+  messageArea.scrollTop = messageArea.scrollHeight;
+
+  // Add click listener to show profile modal for received messages
+  if (!isSent) { 
+    msgDiv.onclick = () => showUserProfileModal(sender, profile);
+  }
+}
+
+
+function displayImage(base64, isSent, id, sender, profile = {}, timestamp = null) {
+  const msgDiv = document.createElement('div');
+  msgDiv.classList.add('message', isSent ? 'sent' : 'received', 'image-message');
+  msgDiv.dataset.sender = sender;
+  msgDiv.dataset.profile = JSON.stringify(profile);
+  msgDiv.dataset.timestamp = timestamp || new Date().toISOString();
+
+  msgDiv.innerHTML = `<strong>${sender}</strong> sent an image:<br>`;
+  const img = document.createElement('img');
+  img.src = `data:image/png;base64,${base64}`;
+  img.style.maxWidth = '100%';
+  img.style.borderRadius = '8px';
+  msgDiv.appendChild(img);
+
+  const timeSpan = document.createElement('span');
+  timeSpan.classList.add('timestamp');
+  timeSpan.textContent = new Date(msgDiv.dataset.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); // Format time
+  msgDiv.appendChild(timeSpan);
+
+  messageArea.appendChild(msgDiv);
+  messageArea.scrollTop = messageArea.scrollHeight;
+
+  // Add click listener to show profile modal for received images
+  if (!isSent) { 
+    msgDiv.onclick = () => showUserProfileModal(sender, profile);
+  }
+}
+
+// ----- PROFILE MODAL ON MESSAGE CLICK -----
+function showUserProfileModal(username, profile = {}) {
+  // Ensure profile is not null or undefined
+  profile = profile || {}; 
+  const { gender = 'Unknown', likes = [] } = profile;
+  const likesList = likes.length ? likes.join(', ') : 'No likes specified';
+
+  const modalHTML = `
+    <div id="userProfileViewModal" class="modal" style="display:flex;">
+      <div class="modal-content">
+        <h3>${username}'s Profile</h3>
+        <p><strong>Gender:</strong> ${gender}</p>
+        <p><strong>Likes:</strong> ${likesList}</p>
+        <button id="closeProfileViewBtn">Close</button>
+      </div>
+    </div>
+  `;
+
+  document.body.insertAdjacentHTML('beforeend', modalHTML);
+  document.getElementById('closeProfileViewBtn').onclick = () => {
+    document.getElementById('userProfileViewModal').remove();
+  };
+}
+
+// ----- LOCAL STORAGE -----
+function saveMessageToLocalStorage(message) {
+  if (!currentRoom) return;
+  const key = `messages_${currentRoom}`;
+  let stored = JSON.parse(localStorage.getItem(key)) || [];
+  
+  // This function is only called for RECEIVED messages by handleIncomingMessage,
+  // so no need to check `message.sender === myProfile.username` here.
+  stored.push(message);
+  localStorage.setItem(key, JSON.stringify(stored));
+}
+
+function loadMessagesFromLocalStorage() {
+  if (!currentRoom) return;
+  const key = `messages_${currentRoom}`;
+  const stored = JSON.parse(localStorage.getItem(key)) || [];
+  messageArea.innerHTML = ''; // Clear existing messages before loading
+  messageHistory.clear(); // Clear the in-memory history before loading from storage
+
+  stored.forEach(msg => {
+    // Only display messages from storage that were NOT sent by me.
+    // My own sent messages are handled by immediate display and then server echo.
+    const isSent = msg.sender === myProfile.username;
+    if (!isSent) { 
+      // Add loaded message ID to history to prevent re-display if echoed later
+      messageHistory.set(msg.id, true); 
+      if (msg.type === 'message') {
+        displayMessage(msg.content, isSent, msg.id, msg.sender, msg.profile || msg.senderProfile, msg.timestamp); 
+      } else if (msg.type === 'image') {
+        displayImage(msg.data, isSent, msg.id, msg.sender, msg.profile || msg.senderProfile, msg.timestamp); 
+      }
     }
+  });
+}
 
-    function joinRoom(roomId) {
-        if (!connectionReady) return;
-        ws.send(JSON.stringify({ type: 'join', room: roomId, user: myProfile.username, profile: myProfile }));
-        // Do NOT clear messageArea or load from localStorage here.
-        // The server will send the history, which will clear/populate the messageArea.
-        showNotification(`Joining room: ${roomId}`);
+// ----- SEND MESSAGE & IMAGE -----
+function sendMessage() {
+  const content = messageInput.value.trim();
+  if (!content) return;
+
+  const msgId = generateMessageId();
+  const timestamp = new Date().toISOString();
+
+  const message = {
+    type: 'message',
+    room: currentRoom,
+    content,
+    sender: myProfile.username,
+    id: msgId,
+    profile: myProfile, 
+    timestamp
+  };
+
+  if (connectionReady) {
+    ws.send(JSON.stringify(message));
+    // Immediately display the message for the sender.
+    // Add its ID to history to ensure the server's echo won't cause a duplicate.
+    if (!messageHistory.has(msgId)) { 
+        messageHistory.set(msgId, true);
+        displayMessage(content, true, msgId, myProfile.username, myProfile, timestamp); 
     }
-
-    // New function to handle real-time incoming messages
-    function handleIncomingRealtimeMessage(message) {
-        const { type, sender, content, imageUrl, id, profile, timestamp } = message; 
-        if (!id) return;
-
-        // Skip duplicate if already displayed (e.g., self-sent message that was displayed instantly)
-        if (messageHistory.has(id)) return;
-        messageHistory.set(id, true); // Mark as processed
-
-        const isSentByMe = sender === myProfile.username;
-
-        // Display messages from other users in real-time.
-        // Messages sent by 'myself' are displayed instantly by sendMessage/sendImage functions,
-        // so we skip the echo from the server to prevent duplicates.
-        if (!isSentByMe) { 
-            if (type === 'message') {
-                displayMessage(content, isSentByMe, id, sender, profile, timestamp);
-            } else if (type === 'image') {
-                // For incoming images from server, use imageUrl
-                displayImage(imageUrl, isSentByMe, id, sender, profile, timestamp);
-            }
-            saveMessageToLocalStorage(message); // Save newly received messages to local storage
-        }
+  } else {
+    queueMessage(message);
+    // Display message for the sender even if queued, with a notification.
+    if (!messageHistory.has(msgId)) {
+      messageHistory.set(msgId, true);
+      displayMessage(content, true, msgId, myProfile.username, myProfile, timestamp);
     }
+  }
 
+  messageInput.value = '';
+}
 
-    // ----- DISPLAY FUNCTIONS -----
-    function highlightKeywords(text) {
-        const keywords = {
-            love: "green",
-            money: "green",
-            home: "green",
-            monpress: "green",
-            "mide sensational": "green",
-            eksu: "green",
-            fuck: "red",
-            danger: "red",
-            warning: "red",
-            sad: "red",
-            sex: "red",
-            kill: "yellow",
-        };
+function sendImage(base64) {
+  if (!connectionReady) return;
 
-        let result = text;
-        for (const [keyword, color] of Object.entries(keywords)) {
-            const regex = new RegExp(`\\b${keyword}\\b`, 'gi');
-            result = result.replace(regex, match => `<span class="highlight-${color}">${match}</span>`);
-        }
-        return result;
+  const msgId = generateMessageId();
+  const timestamp = new Date().toISOString();
+
+  const message = {
+    type: 'image',
+    room: currentRoom,
+    data: base64,
+    sender: myProfile.username,
+    id: msgId,
+    profile: myProfile, 
+    timestamp
+  };
+
+  if (connectionReady) {
+    ws.send(JSON.stringify(message));
+    // Immediately display the image for the sender.
+    // Add its ID to history to ensure the server's echo won't cause a duplicate.
+    if (!messageHistory.has(msgId)) { 
+        messageHistory.set(msgId, true);
+        displayImage(base64, true, msgId, myProfile.username, myProfile, timestamp); 
     }
-
-    function displayMessage(text, isSent, id, sender, profile = {}, timestamp = null) {
-        const msgDiv = document.createElement('div');
-        msgDiv.classList.add('message', isSent ? 'sent' : 'received');
-        msgDiv.dataset.sender = sender;
-        msgDiv.dataset.profile = JSON.stringify(profile);
-        msgDiv.dataset.timestamp = timestamp || new Date().toISOString();
-
-        const highlightedText = highlightKeywords(text);
-        msgDiv.innerHTML = `<strong>${sender}</strong>: ${highlightedText}`;
-
-        const timeSpan = document.createElement('span');
-        timeSpan.classList.add('timestamp');
-        timeSpan.textContent = new Date(msgDiv.dataset.timestamp).toLocaleTimeString();
-        msgDiv.appendChild(timeSpan);
-
-        messageArea.appendChild(msgDiv);
-        messageArea.scrollTop = messageArea.scrollHeight;
-
-        // Add click listener to show profile modal
-        msgDiv.onclick = () => showUserProfileModal(sender, profile);
+  } else {
+    queueMessage(message);
+    // Display image for the sender even if queued, with a notification.
+    if (!messageHistory.has(msgId)) {
+      messageHistory.set(msgId, true);
+      displayImage(base64, true, msgId, myProfile.username, myProfile, timestamp);
     }
+  }
+}
 
-    // Modified displayImage to handle both base64 (for sent) and imageUrl (for received)
-    function displayImage(imageSource, isSent, id, sender, profile = {}, timestamp = null) {
-        const msgDiv = document.createElement('div');
-        msgDiv.classList.add('message', isSent ? 'sent' : 'received', 'image-message');
-        msgDiv.dataset.sender = sender;
-        msgDiv.dataset.profile = JSON.stringify(profile);
-        msgDiv.dataset.timestamp = timestamp || new Date().toISOString();
+// Message queueing functions
+function queueMessage(message) {
+  const username = message.sender;
+  if (!messageQueue.has(username)) {
+    messageQueue.set(username, []);
+  }
+  messageQueue.get(username).push(message);
+  // message.id is already added to messageHistory in sendMessage/sendImage
+  showNotification('Connection lost. Message queued. Will send when reconnected.');
+}
 
-        msgDiv.innerHTML = `<strong>${sender}</strong> sent an image:<br>`;
-        const img = document.createElement('img');
+function deliverQueuedMessages() {
+  if (myProfile && messageQueue.has(myProfile.username)) { 
+    const queuedMessages = messageQueue.get(myProfile.username);
+    queuedMessages.forEach(message => {
+      ws.send(JSON.stringify(message));
+      // Message was already displayed when queued (and ID added to history).
+      // No need to display again. The server echo will be blocked by history.
+    });
+    messageQueue.delete(myProfile.username);
+    showNotification('Queued messages sent!');
+  }
+}
 
-        if (isSent) {
-            // When *sending* an image, `imageSource` is base64 (for immediate local display)
-            img.src = `data:image/png;base64,${imageSource}`;
-        } else {
-            // When *receiving* an image from the server (either real-time or history),
-            // `imageSource` is the URL relative to the server.
-            // We prepend API_BASE_URL to form the full URL.
-            img.src = `${API_BASE_URL}${imageSource}`; 
-        }
-        
-        img.style.maxWidth = '100%';
-        img.style.borderRadius = '8px';
-        msgDiv.appendChild(img);
+// ----- NEW: ONLINE COUNT AND LIST FUNCTIONS -----
 
-        const timeSpan = document.createElement('span');
-        timeSpan.classList.add('timestamp');
-        timeSpan.textContent = new Date(msgDiv.dataset.timestamp).toLocaleTimeString();
-        msgDiv.appendChild(timeSpan);
+function updateOnlineCount(count) {
+    onlineCountSpan.textContent = count;
+    onlineUsersCountInModal.textContent = count;
+}
 
-        messageArea.appendChild(msgDiv);
-        messageArea.scrollTop = messageArea.scrollHeight;
-
-        msgDiv.onclick = () => showUserProfileModal(sender, profile);
+function requestOnlineUserList() {
+    if (connectionReady) {
+        ws.send(JSON.stringify({ type: 'requestOnlineUsers' }));
     }
+}
 
-    // ----- PROFILE MODAL ON MESSAGE CLICK -----
-    const viewerModal = document.getElementById('viewerModal');
-    const viewerUsernameSpan = document.getElementById('viewerUsername');
-    const viewerGenderSpan = document.getElementById('viewerGender');
-    const viewerLikesSpan = document.getElementById('viewerLikes');
-
-    function showUserProfileModal(username, profile = {}) {
-        const { gender = 'Unknown', likes = [] } = profile;
-        const likesList = likes.length ? likes.join(', ') : 'No likes specified';
-
-        viewerUsernameSpan.textContent = username;
-        viewerGenderSpan.textContent = gender;
-        viewerLikesSpan.textContent = likesList;
-        viewerModal.style.display = 'flex'; // Show modal
-    }
-
-    window.closeViewer = () => { // Make global for onclick
-        viewerModal.style.display = 'none'; // Hide modal
-    };
-
-
-    // ----- LOCAL STORAGE (Only for newly received messages now) -----
-    // This will now only save messages received *after* the initial history load
-    // from the server, or messages sent by yourself.
-    function saveMessageToLocalStorage(message) {
-        if (!currentRoom) return;
-        const key = `messages_${currentRoom}`;
-        let stored = JSON.parse(localStorage.getItem(key)) || [];
-        // Prevent duplicates from history loading from being saved twice
-        if (!stored.some(msg => msg.id === message.id)) {
-            stored.push(message);
-            localStorage.setItem(key, JSON.stringify(stored));
-        }
-    }
-
-    // This function is now largely obsolete as server provides history on connect.
-    // It's kept for potential future use or if you want to fall back to purely local.
-    function loadMessagesFromLocalStorage() {
-        // This function is not explicitly called after `joinRoom` in the new `initWebSocket`.
-        // The `ws.onmessage` `type === 'history'` block handles the primary display of past messages.
-    }
-
-
-    // ----- SEND MESSAGE & IMAGE -----
-    function sendMessage() {
-        const content = messageInput.value.trim();
-        if (!content || !connectionReady) return;
-
-        const msgId = generateMessageId();
-        const timestamp = new Date().toISOString();
-
-        const message = {
-            type: 'message',
-            room: currentRoom,
-            content,
-            sender: myProfile.username,
-            id: msgId,
-            profile: myProfile, // Ensure 'profile' field matches server's 'profile' expectation
-            timestamp
-        };
-
-        ws.send(JSON.stringify(message));
-        displayMessage(content, true, msgId, myProfile.username, myProfile, timestamp); // Display immediately
-        saveMessageToLocalStorage(message); // Save sent message to local storage
-
-        messageInput.value = '';
-    }
-
-    function sendImage(base64, filename = 'image.png') { // Added filename parameter
-        if (!connectionReady) return;
-
-        const msgId = generateMessageId();
-        const timestamp = new Date().toISOString();
-
-        const message = {
-            type: 'image',
-            room: currentRoom,
-            data: base64, // Send base64 to server
-            filename: filename, // Send filename to server
-            sender: myProfile.username,
-            id: msgId,
-            profile: myProfile,
-            timestamp
-        };
-
-        ws.send(JSON.stringify(message));
-        displayImage(base64, true, msgId, myProfile.username, myProfile, timestamp); // Display immediately (base64)
-        // Image messages from server will have imageUrl, save this version for local storage for now.
-        // Consider if you want to store the URL in local storage instead of base64 if server provides it.
-        saveMessageToLocalStorage(message); 
-    }
-
-    // ----- UTILS -----
-    function generateMessageId() {
-        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
-            const r = Math.random() * 16 | 0,
-                v = c === 'x' ? r : (r & 0x3 | 0x8);
-            return v.toString(16);
+function displayOnlineUserList(users) {
+    onlineUsersList.innerHTML = ''; // Clear previous list
+    if (users.length === 0) {
+        const li = document.createElement('li');
+        li.textContent = 'No other users online.';
+        onlineUsersList.appendChild(li);
+    } else {
+        users.forEach(username => {
+            const li = document.createElement('li');
+            li.textContent = username;
+            onlineUsersList.appendChild(li);
         });
     }
+    onlineUsersModal.style.display = 'flex'; // Use 'flex' for modals
+}
 
-    function showNotification(msg) {
-        notificationDiv.textContent = msg;
-        notificationDiv.style.display = 'block';
-        setTimeout(() => {
-            notificationDiv.style.display = 'none';
-        }, 3000);
-    }
+// ----- UTILS -----
+function generateMessageId() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    const r = Math.random() * 16 | 0,
+      v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
 
-    // Clear client-side stored history
-    window.clearLocalStorage = () => { // Make global for onclick
-        localStorage.removeItem(`messages_${currentRoom}`);
-        messageArea.innerHTML = '';
-        messageHistory.clear(); // Clear the map too
-        showNotification('Chat history cleared from browser.');
-    };
+function showNotification(msg) {
+  notificationDiv.textContent = msg;
+  notificationDiv.style.display = 'block';
+  setTimeout(() => {
+    notificationDiv.style.display = 'none';
+  }, 3000);
+}
 
-    // ----- IMAGE UPLOAD HANDLER -----
-    imageUpload.addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
+function clearLocalStorage() {
+  localStorage.removeItem(`messages_${currentRoom}`);
+  messageArea.innerHTML = '';
+  showNotification('Chat history cleared.');
+  messageHistory.clear(); // Also clear the in-memory history
+}
 
-        // Add a simple check for file type
-        if (!file.type.startsWith('image/')) {
-            alert('Please select an image file.');
-            e.target.value = null;
-            return;
-        }
+// ----- IMAGE UPLOAD HANDLER -----
+imageUpload.addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onloadend = () => {
+    const base64 = reader.result.split(',')[1];
+    sendImage(base64);
+  };
+  reader.readAsDataURL(file);
+  e.target.value = null;
+});
 
-        const reader = new FileReader();
-        reader.onloadend = () => {
-            const base64 = reader.result.split(',')[1];
-            sendImage(base64, file.name); // Pass filename to sendImage
-        };
-        reader.readAsDataURL(file);
-        e.target.value = null; // Clear the input so same file can be selected again
-    });
+// ----- INITIALIZATION -----
+loadOrCreateProfile();
 
-    // ----- INITIALIZATION -----
-    loadOrCreateProfile(); // This will eventually call initWebSocket
+// Expose functions to global scope for HTML onclick
+window.sendMessage = sendMessage;
+window.clearLocalStorage = clearLocalStorage;
+window.saveProfile = saveProfile; // Expose saveProfile for the modal button
+
   </script>
 </body>
 </html>
