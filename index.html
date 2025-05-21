@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <style>
-  
+          
 body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   background-color: #e0e0e0;
@@ -172,7 +172,6 @@ button:hover {
   display: none;
 }
 
-/* Modal styles */
 .modal {
   display: none;
   position: fixed;
@@ -195,7 +194,6 @@ button:hover {
   box-shadow: 0 4px 10px rgba(0,0,0,0.2);
 }
 
-/* Highlight keyword colors */
 .highlight-green {
   background-color: #a0d995;
   font-weight: bold;
@@ -217,12 +215,11 @@ button:hover {
   padding: 0 2px;
 }
 
-/* New style for online count */
 #onlineCountDisplay {
   position: fixed;
   top: 10px;
   left: 10px;
-  background-color: #4CAF50; /* Green background */
+  background-color: #4CAF50;
   color: white;
   padding: 8px 12px;
   border-radius: 20px;
@@ -237,7 +234,26 @@ button:hover {
   background-color: #45a049;
 }
 
-/* Online Users List Modal */
+#usernameDisplay {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  background-color: #007bff;
+  color: white;
+  padding: 8px 12px;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 0.9em;
+  font-weight: bold;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  opacity: 0.7;
+  transition: opacity 0.3s ease;
+}
+
+#usernameDisplay:hover {
+  opacity: 1;
+}
+
 #onlineUsersModal .modal-content ul {
     list-style: none;
     padding: 0;
@@ -252,14 +268,13 @@ button:hover {
     border-bottom: none;
 }
 
-/* Profile Setup Modal specific styles */
 #profileSetupModal .modal-content {
     text-align: left;
 }
 
 #profileSetupModal input[type="text"],
 #profileSetupModal select {
-    width: calc(100% - 22px); /* Account for padding */
+    width: calc(100% - 22px);
     padding: 10px;
     margin-bottom: 15px;
     border: 1px solid #ddd;
@@ -300,10 +315,14 @@ button:hover {
 
 </style>
 <body>
-  <div id="loading">Loading...</div>
+  <div id="loading"></div>
 
   <div id="onlineCountDisplay">
     Online: <span id="onlineCount">0</span>
+  </div>
+
+  <div id="usernameDisplay">
+    <span id="currentUsername"></span>
   </div>
 
   <div id="messageArea"></div>
@@ -322,16 +341,17 @@ button:hover {
   <div id="profileSetupModal" class="modal">
     <div class="modal-content">
       <h2>Set up your profile</h2>
+      <small>suggestion, dont use a real name, be anonymous </small>
       <label for="profileUsername">Username:</label>
       <input id="profileUsername" type="text" maxlength="20" placeholder="Your name" required>
 
       <fieldset>
         <legend>Things you like:</legend>
         <label><input type="checkbox" name="likes" value="love"> Love</label>
-        <label><input type="checkbox" name="likes" value="dogs"> Dogs</label>
-        <label><input type="checkbox" name="likes" value="cats"> Cats</label>
+        <label><input type="checkbox" name="likes" value="Party"> Party</label>
+        <label><input type="checkbox" name="likes" value="Novels"> Novels</label>
         <label><input type="checkbox" name="likes" value="music"> Music</label>
-        <label><input type="checkbox" name="likes" value="sex"> Sex</label>
+        <label><input type="checkbox" name="likes" value="hiking"> Hiking</label>
         <label><input type="checkbox" name="likes" value="relationship"> Relationship</label>
       </fieldset>
 
@@ -350,6 +370,15 @@ button:hover {
     </div>
   </div>
 
+
+  <div id="viewMyUsernameModal" class="modal">
+    <div class="modal-content">
+      <h2>Your Username</h2>
+      <p id="myDisplayedUsername"></p>
+      <button onclick="document.getElementById('viewMyUsernameModal').style.display='none'">Close</button>
+      <button onclick="showProfileSetupModalForEdit()">Change Profile</button>
+    </div>
+  </div>
 
   <div id="viewerModal" class="modal">
     <div class="modal-content">
@@ -371,8 +400,8 @@ button:hover {
   </div>
 
   <script>
-    
-const ws = new WebSocket('wss://websocket-server-6jct.onrender.com'); // IMPORTANT: Replace with your actual server URL
+            
+let ws = new WebSocket('wss://websocket-server-6jct.onrender.com');
 const messageArea = document.getElementById('messageArea');
 const messageInput = document.getElementById('messageInput');
 const imageUpload = document.getElementById('imageUpload');
@@ -383,35 +412,61 @@ const onlineCountSpan = document.getElementById('onlineCount');
 const onlineUsersModal = document.getElementById('onlineUsersModal'); 
 const onlineUsersList = document.getElementById('onlineUsersList'); 
 const onlineUsersCountInModal = document.getElementById('onlineUsersCountInModal'); 
+const usernameDisplay = document.getElementById('usernameDisplay');
+const currentUsernameSpan = document.getElementById('currentUsername');
 
-// Profile setup modal elements
 const profileSetupModal = document.getElementById('profileSetupModal');
 const profileUsernameInput = document.getElementById('profileUsername');
 const profileGenderSelect = document.getElementById('profileGender');
 const profileAdultCheckbox = document.getElementById('profileAdult');
 
+const viewMyUsernameModal = document.getElementById('viewMyUsernameModal');
+const myDisplayedUsernameParagraph = document.getElementById('myDisplayedUsername');
 
 let currentRoom = "anonymous";
-let myProfile = null; // Will hold username, likes, gender, isAdult
+let myProfile = null; 
 let connectionReady = false;
-const messageHistory = new Map(); // Tracks displayed message IDs to prevent duplicates
-const messageQueue = new Map(); // Stores messages to send when connection is re-established
+const messageHistory = new Map(); 
+const messageQueue = new Map(); 
 
 loadingDiv.style.display = 'block';
 
-// Add event listener for the online count display
 onlineCountDisplay.addEventListener('click', requestOnlineUserList);
+usernameDisplay.addEventListener('click', showMyUsernameModal); 
 
-// ----- USER PROFILE MODAL (Initial Setup) -----
 function showProfileSetupModal() {
-  profileSetupModal.style.display = 'flex'; // Show the modal
-  // Clear any previous inputs for a clean start
+  profileSetupModal.style.display = 'flex';
   profileUsernameInput.value = '';
-  profileGenderSelect.value = ''; // Reset select to default option
+  profileGenderSelect.value = ''; 
   profileAdultCheckbox.checked = false;
   const likesCheckboxes = profileSetupModal.querySelectorAll('input[name="likes"]');
   likesCheckboxes.forEach(cb => cb.checked = false);
 }
+
+function showProfileSetupModalForEdit() {
+    viewMyUsernameModal.style.display = 'none';
+    profileSetupModal.style.display = 'flex';
+    if (myProfile) {
+        profileUsernameInput.value = myProfile.username;
+        profileGenderSelect.value = myProfile.gender;
+        profileAdultCheckbox.checked = myProfile.isAdult;
+        const likesCheckboxes = profileSetupModal.querySelectorAll('input[name="likes"]');
+        likesCheckboxes.forEach(cb => {
+            cb.checked = myProfile.likes.includes(cb.value);
+        });
+    }
+}
+
+function showMyUsernameModal() {
+  if (myProfile && myProfile.username) {
+    myDisplayedUsernameParagraph.textContent = myProfile.username;
+    viewMyUsernameModal.style.display = 'flex';
+  } else {
+    showNotification('No username set. Please set up your profile first.');
+    showProfileSetupModal();
+  }
+}
+
 
 function saveProfile() {
   const username = profileUsernameInput.value.trim();
@@ -433,24 +488,35 @@ function saveProfile() {
     return;
   }
 
+  const oldUsername = myProfile ? myProfile.username : null;
   myProfile = { username, gender, likes, isAdult: adultCheckbox };
   localStorage.setItem('myProfile', JSON.stringify(myProfile));
-  profileSetupModal.style.display = 'none'; // Hide modal
-  initWebSocket(); // Initialize WebSocket after profile is set
+  profileSetupModal.style.display = 'none'; 
+  updateUsernameDisplay(myProfile.username);
+
+  if (!connectionReady) {
+    initWebSocket();
+  } else {
+    ws.send(JSON.stringify({ type: 'updateProfile', oldUsername: oldUsername, newProfile: myProfile }));
+    showNotification('Profile updated. New username: ' + username);
+  }
 }
 
-// Load profile from localStorage or show modal
 function loadOrCreateProfile() {
   const savedProfile = localStorage.getItem('myProfile');
   if (savedProfile) {
     myProfile = JSON.parse(savedProfile);
+    updateUsernameDisplay(myProfile.username);
     initWebSocket();
   } else {
     showProfileSetupModal();
   }
 }
 
-// ----- WEBSOCKET AND CHAT HANDLERS -----
+function updateUsernameDisplay(username) {
+  currentUsernameSpan.textContent = username;
+}
+
 function initWebSocket() {
   ws.onopen = () => {
     console.log('Connected to WebSocket server!');
@@ -458,7 +524,7 @@ function initWebSocket() {
     loadingDiv.style.display = 'none';
     joinRoom(currentRoom);
     deliverQueuedMessages();
-    requestOnlineUserList(); // Request initial online count/list
+    requestOnlineUserList(); 
   };
 
   ws.onmessage = (event) => {
@@ -469,7 +535,8 @@ function initWebSocket() {
           updateOnlineCount(message.count);
       } else if (message.type === 'overallUserList') {
           displayOnlineUserList(message.users);
-      } else if (message.room === currentRoom) { // Process messages for the current room
+      } 
+      else if (message.room === currentRoom) { 
         handleIncomingMessage(message);
       }
     } catch (err) {
@@ -487,29 +554,67 @@ function initWebSocket() {
     console.log('Disconnected from WebSocket');
     connectionReady = false;
     loadingDiv.style.display = 'block';
-    updateOnlineCount(0); // Set count to 0 on disconnect
+    updateOnlineCount(0); 
     showNotification('Disconnected. Attempting to reconnect in 3 seconds...');
-    setTimeout(reconnectWebSocket, 3000); // Attempt to reconnect after a delay
+  setTimeout(reconnectWebSocket, 3000); 
   };
 }
 
 function reconnectWebSocket() {
-    if (!connectionReady) { // Only try to reconnect if not already connected
+    if (!connectionReady) { 
         console.log('Attempting to reconnect...');
-        const newWs = new WebSocket('wss://websocket-server-6jct.onrender.com'); // Replace with your server URL
-        // Re-assign event handlers to the new WebSocket instance
-        newWs.onopen = ws.onopen;
-        newWs.onmessage = ws.onmessage;
-        newWs.onerror = ws.onerror;
-        newWs.onclose = ws.onclose;
-        ws = newWs; // Update the global ws variable
+        const newWs = new WebSocket('wss://websocket-server-6jct.onrender.com'); 
+        ws = newWs; 
+        ws.onopen = initWebSocket.onopen; 
+        ws.onmessage = initWebSocket.onmessage;
+        ws.onerror = initWebSocket.onerror;
+        ws.onclose = initWebSocket.onclose;
+        
+        ws.onopen = () => {
+          console.log('Reconnected to WebSocket server!');
+          connectionReady = true;
+          loadingDiv.style.display = 'none';
+          joinRoom(currentRoom); 
+          deliverQueuedMessages();
+          requestOnlineUserList();
+        };
+
+        ws.onmessage = (event) => {
+            try {
+                const message = JSON.parse(event.data);
+                if (message.type === 'overallOnlineCount') {
+                    updateOnlineCount(message.count);
+                } else if (message.type === 'overallUserList') {
+                    displayOnlineUserList(message.users);
+                } 
+                else if (message.room === currentRoom) {
+                    handleIncomingMessage(message);
+                }
+            } catch (err) {
+                console.error('Error parsing message during reconnect:', err);
+            }
+        };
+
+        ws.onerror = (error) => {
+            console.error('WebSocket error during reconnect:', error);
+            loadingDiv.style.display = 'block';
+            showNotification('WebSocket connection error. Retrying...');
+        };
+
+        ws.onclose = () => {
+            console.log('Disconnected again. Retrying reconnect...');
+            connectionReady = false;
+            loadingDiv.style.display = 'block';
+            updateOnlineCount(0);
+            showNotification('Disconnected. Attempting to reconnect in 3 seconds...');
+            setTimeout(reconnectWebSocket, 3000);
+        };
     }
 }
 
 
 function joinRoom(roomId) {
   if (!connectionReady) return;
-  // Ensure profile is sent with the join message
   ws.send(JSON.stringify({ type: 'join', room: roomId, user: myProfile.username, profile: myProfile })); 
   messageArea.innerHTML = "";
   showNotification(`Joined room: ${roomId}`);
@@ -520,39 +625,34 @@ function handleIncomingMessage(message) {
   const { type, sender, content, data, id, senderProfile, timestamp } = message; 
   if (!id) return;
 
-  // IMPORTANT FIX: Always check messageHistory first to prevent duplicates
   if (messageHistory.has(id)) {
-      console.log(`Duplicate message received (ID: ${id}). Skipping display.`);
       return; 
   }
-  // If it's a new message, mark it as processed
   messageHistory.set(id, true); 
 
   const isSentByMe = sender === myProfile.username;
 
-  // Display the message ONLY if it's NOT sent by the current user.
-  // Our own sent messages are displayed immediately in sendMessage/sendImage.
+  const profileToUseForViewer = senderProfile || {};
+
   if (!isSentByMe) { 
     if (type === 'message') {
-      displayMessage(content, isSentByMe, id, sender, senderProfile, timestamp); 
-      saveMessageToLocalStorage(message); // Only save received messages
+      displayMessage(content, isSentByMe, id, sender, profileToUseForViewer, timestamp); 
+      saveMessageToLocalStorage(message); 
     } else if (type === 'image') {
-      displayImage(data, isSentByMe, id, sender, senderProfile, timestamp); 
-      saveMessageToLocalStorage(message); // Only save received images
+      displayImage(data, isSentByMe, id, sender, profileToUseForViewer, timestamp); 
+      saveMessageToLocalStorage(message); 
     }
   }
 }
 
-
-// ----- DISPLAY FUNCTIONS -----
 function highlightKeywords(text) {
   const keywords = {
     love: "green",
     money: "green",
     home: "green",
     monpress: "green",
-    "mide sensational": "green",
-    eksu: "green",
+    "eli monpress": "green",
+    eksu: "red",
     fuck: "red",
     danger: "red",
     warning: "red",
@@ -565,7 +665,7 @@ function highlightKeywords(text) {
 
   for (const [keyword, color] of Object.entries(keywords)) {
     const regex = new RegExp(`\\b${keyword}\\b`, 'gi');
-    result = result.replace(regex, match => `<span class="highlight-${color}">${match}</span>`); // Use class
+    result = result.replace(regex, match => `<span class="highlight-${color}">${match}</span>`); 
   }
   return result;
 }
@@ -577,23 +677,20 @@ function displayMessage(text, isSent, id, sender, profile = {}, timestamp = null
   msgDiv.dataset.profile = JSON.stringify(profile);
   msgDiv.dataset.timestamp = timestamp || new Date().toISOString();
 
-  const highlightedText = highlightKeywords(text);
-  msgDiv.innerHTML = `<strong>${sender}</strong>: ${highlightedText}`;
+  msgDiv.innerHTML = `<strong>${sender}</strong>: ${highlightKeywords(text)}`;
 
   const timeSpan = document.createElement('span');
   timeSpan.classList.add('timestamp');
-  timeSpan.textContent = new Date(msgDiv.dataset.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); // Format time
+  timeSpan.textContent = new Date(msgDiv.dataset.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); 
   msgDiv.appendChild(timeSpan);
 
   messageArea.appendChild(msgDiv);
   messageArea.scrollTop = messageArea.scrollHeight;
 
-  // Add click listener to show profile modal for received messages
   if (!isSent) { 
     msgDiv.onclick = () => showUserProfileModal(sender, profile);
   }
 }
-
 
 function displayImage(base64, isSent, id, sender, profile = {}, timestamp = null) {
   const msgDiv = document.createElement('div');
@@ -611,21 +708,18 @@ function displayImage(base64, isSent, id, sender, profile = {}, timestamp = null
 
   const timeSpan = document.createElement('span');
   timeSpan.classList.add('timestamp');
-  timeSpan.textContent = new Date(msgDiv.dataset.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); // Format time
+  timeSpan.textContent = new Date(msgDiv.dataset.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); 
   msgDiv.appendChild(timeSpan);
 
   messageArea.appendChild(msgDiv);
   messageArea.scrollTop = messageArea.scrollHeight;
 
-  // Add click listener to show profile modal for received images
   if (!isSent) { 
     msgDiv.onclick = () => showUserProfileModal(sender, profile);
   }
 }
 
-// ----- PROFILE MODAL ON MESSAGE CLICK -----
 function showUserProfileModal(username, profile = {}) {
-  // Ensure profile is not null or undefined
   profile = profile || {}; 
   const { gender = 'Unknown', likes = [] } = profile;
   const likesList = likes.length ? likes.join(', ') : 'No likes specified';
@@ -641,20 +735,22 @@ function showUserProfileModal(username, profile = {}) {
     </div>
   `;
 
+  const existingModal = document.getElementById('userProfileViewModal');
+  if (existingModal) {
+    existingModal.remove();
+  }
+
   document.body.insertAdjacentHTML('beforeend', modalHTML);
   document.getElementById('closeProfileViewBtn').onclick = () => {
     document.getElementById('userProfileViewModal').remove();
   };
 }
 
-// ----- LOCAL STORAGE -----
 function saveMessageToLocalStorage(message) {
   if (!currentRoom) return;
   const key = `messages_${currentRoom}`;
   let stored = JSON.parse(localStorage.getItem(key)) || [];
   
-  // This function is only called for RECEIVED messages by handleIncomingMessage,
-  // so no need to check `message.sender === myProfile.username` here.
   stored.push(message);
   localStorage.setItem(key, JSON.stringify(stored));
 }
@@ -663,15 +759,12 @@ function loadMessagesFromLocalStorage() {
   if (!currentRoom) return;
   const key = `messages_${currentRoom}`;
   const stored = JSON.parse(localStorage.getItem(key)) || [];
-  messageArea.innerHTML = ''; // Clear existing messages before loading
-  messageHistory.clear(); // Clear the in-memory history before loading from storage
+  messageArea.innerHTML = ''; 
+  messageHistory.clear(); 
 
   stored.forEach(msg => {
-    // Only display messages from storage that were NOT sent by me.
-    // My own sent messages are handled by immediate display and then server echo.
     const isSent = msg.sender === myProfile.username;
     if (!isSent) { 
-      // Add loaded message ID to history to prevent re-display if echoed later
       messageHistory.set(msg.id, true); 
       if (msg.type === 'message') {
         displayMessage(msg.content, isSent, msg.id, msg.sender, msg.profile || msg.senderProfile, msg.timestamp); 
@@ -682,7 +775,6 @@ function loadMessagesFromLocalStorage() {
   });
 }
 
-// ----- SEND MESSAGE & IMAGE -----
 function sendMessage() {
   const content = messageInput.value.trim();
   if (!content) return;
@@ -696,21 +788,18 @@ function sendMessage() {
     content,
     sender: myProfile.username,
     id: msgId,
-    profile: myProfile, 
+    profile: myProfile,
     timestamp
   };
 
   if (connectionReady) {
     ws.send(JSON.stringify(message));
-    // Immediately display the message for the sender.
-    // Add its ID to history to ensure the server's echo won't cause a duplicate.
     if (!messageHistory.has(msgId)) { 
         messageHistory.set(msgId, true);
         displayMessage(content, true, msgId, myProfile.username, myProfile, timestamp); 
     }
   } else {
     queueMessage(message);
-    // Display message for the sender even if queued, with a notification.
     if (!messageHistory.has(msgId)) {
       messageHistory.set(msgId, true);
       displayMessage(content, true, msgId, myProfile.username, myProfile, timestamp);
@@ -732,21 +821,18 @@ function sendImage(base64) {
     data: base64,
     sender: myProfile.username,
     id: msgId,
-    profile: myProfile, 
+    profile: myProfile,
     timestamp
   };
 
   if (connectionReady) {
     ws.send(JSON.stringify(message));
-    // Immediately display the image for the sender.
-    // Add its ID to history to ensure the server's echo won't cause a duplicate.
     if (!messageHistory.has(msgId)) { 
         messageHistory.set(msgId, true);
         displayImage(base64, true, msgId, myProfile.username, myProfile, timestamp); 
     }
   } else {
     queueMessage(message);
-    // Display image for the sender even if queued, with a notification.
     if (!messageHistory.has(msgId)) {
       messageHistory.set(msgId, true);
       displayImage(base64, true, msgId, myProfile.username, myProfile, timestamp);
@@ -754,14 +840,12 @@ function sendImage(base64) {
   }
 }
 
-// Message queueing functions
 function queueMessage(message) {
   const username = message.sender;
   if (!messageQueue.has(username)) {
     messageQueue.set(username, []);
   }
   messageQueue.get(username).push(message);
-  // message.id is already added to messageHistory in sendMessage/sendImage
   showNotification('Connection lost. Message queued. Will send when reconnected.');
 }
 
@@ -770,15 +854,11 @@ function deliverQueuedMessages() {
     const queuedMessages = messageQueue.get(myProfile.username);
     queuedMessages.forEach(message => {
       ws.send(JSON.stringify(message));
-      // Message was already displayed when queued (and ID added to history).
-      // No need to display again. The server echo will be blocked by history.
     });
     messageQueue.delete(myProfile.username);
     showNotification('Queued messages sent!');
   }
 }
-
-// ----- NEW: ONLINE COUNT AND LIST FUNCTIONS -----
 
 function updateOnlineCount(count) {
     onlineCountSpan.textContent = count;
@@ -792,22 +872,31 @@ function requestOnlineUserList() {
 }
 
 function displayOnlineUserList(users) {
-    onlineUsersList.innerHTML = ''; // Clear previous list
+    onlineUsersList.innerHTML = ''; 
     if (users.length === 0) {
         const li = document.createElement('li');
         li.textContent = 'No other users online.';
         onlineUsersList.appendChild(li);
     } else {
-        users.forEach(username => {
+        users.forEach(userEntry => {
+            let username = userEntry;
+            let profile = {};
+
+            if (typeof userEntry === 'object' && userEntry.username) {
+                username = userEntry.username;
+                profile = userEntry.profile || {};
+            } 
+
             const li = document.createElement('li');
             li.textContent = username;
+            li.style.cursor = 'pointer'; 
+            li.onclick = () => showUserProfileModal(username, profile);
             onlineUsersList.appendChild(li);
         });
     }
-    onlineUsersModal.style.display = 'flex'; // Use 'flex' for modals
+    onlineUsersModal.style.display = 'flex'; 
 }
 
-// ----- UTILS -----
 function generateMessageId() {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
     const r = Math.random() * 16 | 0,
@@ -828,10 +917,9 @@ function clearLocalStorage() {
   localStorage.removeItem(`messages_${currentRoom}`);
   messageArea.innerHTML = '';
   showNotification('Chat history cleared.');
-  messageHistory.clear(); // Also clear the in-memory history
+  messageHistory.clear(); 
 }
 
-// ----- IMAGE UPLOAD HANDLER -----
 imageUpload.addEventListener('change', (e) => {
   const file = e.target.files[0];
   if (!file) return;
@@ -844,13 +932,12 @@ imageUpload.addEventListener('change', (e) => {
   e.target.value = null;
 });
 
-// ----- INITIALIZATION -----
 loadOrCreateProfile();
 
-// Expose functions to global scope for HTML onclick
 window.sendMessage = sendMessage;
 window.clearLocalStorage = clearLocalStorage;
-window.saveProfile = saveProfile; // Expose saveProfile for the modal button
+window.saveProfile = saveProfile; 
+window.showProfileSetupModalForEdit = showProfileSetupModalForEdit;
 
   </script>
 </body>
