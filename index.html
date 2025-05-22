@@ -7,8 +7,7 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <style>
-          
-body {
+  body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   background-color: #e0e0e0;
   margin: 0;
@@ -16,6 +15,8 @@ body {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  padding-bottom: 70px; /* Added for fixed input area */
+  box-sizing: border-box; /* Added for consistent box model */
 }
 
 #messageArea {
@@ -27,6 +28,7 @@ body {
   margin: 10px;
   display: flex;
   flex-direction: column;
+  margin-bottom: 0; /* Adjusted for fixed input area */
 }
 
 .message {
@@ -88,6 +90,15 @@ body {
   padding: 10px;
   background-color: #f0f0f0;
   border-top: 1px solid #ccc;
+  
+  /* --- Added for fixed input area --- */
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  box-sizing: border-box;
+  z-index: 100;
+  /* --- End Added --- */
 }
 
 #messageInput {
@@ -150,7 +161,7 @@ button:hover {
   padding: 8px 12px;
   border-radius: 5px;
   cursor: pointer;
-  margin: 10px auto;
+  margin: 10px auto 70px auto; /* Adjusted margin-bottom to clear fixed input */
   display: block;
 }
 
@@ -182,11 +193,13 @@ button:hover {
   height: 100%;
   overflow: auto;
   background-color: rgba(0,0,0,0.4);
+  align-items: center; /* Center vertically */
+  justify-content: center; /* Center horizontally */
 }
 
 .modal-content {
   background-color: #fefefe;
-  margin: 10% auto;
+  margin: auto; /* Changed from 10% auto to auto for flex centering */
   padding: 20px;
   border-radius: 10px;
   width: 90%;
@@ -248,6 +261,7 @@ button:hover {
   box-shadow: 0 2px 5px rgba(0,0,0,0.2);
   opacity: 0.7;
   transition: opacity 0.3s ease;
+  z-index: 1001; /* Ensured higher z-index */
 }
 
 #usernameDisplay:hover {
@@ -400,8 +414,7 @@ button:hover {
   </div>
 
   <script>
-            
-let ws = new WebSocket('wss://websocket-server-6jct.onrender.com');
+    let ws = new WebSocket('wss://websocket-server-6jct.onrender.com');
 const messageArea = document.getElementById('messageArea');
 const messageInput = document.getElementById('messageInput');
 const imageUpload = document.getElementById('imageUpload');
@@ -634,14 +647,17 @@ function handleIncomingMessage(message) {
 
   const profileToUseForViewer = senderProfile || {};
 
-  if (!isSentByMe) { 
-    if (type === 'message') {
+  // Display all messages, but only save messages from others to avoid duplicates
+  if (type === 'message') {
       displayMessage(content, isSentByMe, id, sender, profileToUseForViewer, timestamp); 
-      saveMessageToLocalStorage(message); 
-    } else if (type === 'image') {
+      if (!isSentByMe) { // Only save if it's a message from another user
+          saveMessageToLocalStorage(message); 
+      }
+  } else if (type === 'image') {
       displayImage(data, isSentByMe, id, sender, profileToUseForViewer, timestamp); 
-      saveMessageToLocalStorage(message); 
-    }
+      if (!isSentByMe) { // Only save if it's an image from another user
+          saveMessageToLocalStorage(message); 
+      }
   }
 }
 
@@ -751,8 +767,11 @@ function saveMessageToLocalStorage(message) {
   const key = `messages_${currentRoom}`;
   let stored = JSON.parse(localStorage.getItem(key)) || [];
   
-  stored.push(message);
-  localStorage.setItem(key, JSON.stringify(stored));
+  // Ensure no duplicate messages are stored if messages are re-sent from queue
+  if (!stored.some(msg => msg.id === message.id)) {
+      stored.push(message);
+      localStorage.setItem(key, JSON.stringify(stored));
+  }
 }
 
 function loadMessagesFromLocalStorage() {
@@ -764,13 +783,12 @@ function loadMessagesFromLocalStorage() {
 
   stored.forEach(msg => {
     const isSent = msg.sender === myProfile.username;
-    if (!isSent) { 
-      messageHistory.set(msg.id, true); 
-      if (msg.type === 'message') {
-        displayMessage(msg.content, isSent, msg.id, msg.sender, msg.profile || msg.senderProfile, msg.timestamp); 
-      } else if (msg.type === 'image') {
-        displayImage(msg.data, isSent, msg.id, msg.sender, msg.profile || msg.senderProfile, msg.timestamp); 
-      }
+    // Display all messages, regardless of who sent them
+    messageHistory.set(msg.id, true); 
+    if (msg.type === 'message') {
+      displayMessage(msg.content, isSent, msg.id, msg.sender, msg.profile || msg.senderProfile, msg.timestamp); 
+    } else if (msg.type === 'image') {
+      displayImage(msg.data, isSent, msg.id, msg.sender, msg.profile || msg.senderProfile, msg.timestamp); 
     }
   });
 }
@@ -792,15 +810,18 @@ function sendMessage() {
     timestamp
   };
 
+  // Always save the message to local storage when it's 'sent' (displayed on your side)
+  saveMessageToLocalStorage(message); 
+
   if (connectionReady) {
     ws.send(JSON.stringify(message));
-    if (!messageHistory.has(msgId)) { 
+    if (!messageHistory.has(msgId)) { // Check again to avoid displaying duplicates if already in history from local storage
         messageHistory.set(msgId, true);
         displayMessage(content, true, msgId, myProfile.username, myProfile, timestamp); 
     }
   } else {
     queueMessage(message);
-    if (!messageHistory.has(msgId)) {
+    if (!messageHistory.has(msgId)) { // Check again
       messageHistory.set(msgId, true);
       displayMessage(content, true, msgId, myProfile.username, myProfile, timestamp);
     }
@@ -825,15 +846,18 @@ function sendImage(base64) {
     timestamp
   };
 
+  // Always save the image message to local storage
+  saveMessageToLocalStorage(message); 
+
   if (connectionReady) {
     ws.send(JSON.stringify(message));
-    if (!messageHistory.has(msgId)) { 
+    if (!messageHistory.has(msgId)) { // Check again
         messageHistory.set(msgId, true);
         displayImage(base64, true, msgId, myProfile.username, myProfile, timestamp); 
     }
   } else {
     queueMessage(message);
-    if (!messageHistory.has(msgId)) {
+    if (!messageHistory.has(msgId)) { // Check again
       messageHistory.set(msgId, true);
       displayImage(base64, true, msgId, myProfile.username, myProfile, timestamp);
     }
@@ -938,6 +962,7 @@ window.sendMessage = sendMessage;
 window.clearLocalStorage = clearLocalStorage;
 window.saveProfile = saveProfile; 
 window.showProfileSetupModalForEdit = showProfileSetupModalForEdit;
+
 
   </script>
 </body>
